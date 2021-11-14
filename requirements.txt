@@ -1,7 +1,5 @@
 flask
-requests
-beautifulsoup4
-timezonefinder
 # Some usefull stuff are not in 1.7.2
 git+https://github.com/jellyfin/jellyfin-apiclient-python@3442ef57d5f8d60dc7a7419d44ce0f4d2f26337f
 tabulate
+toml

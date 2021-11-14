@@ -1,18 +1,11 @@
 #!/bin/python
 
-import requests
 import argparse
-import datetime
 import json
 import toml
 from itertools import cycle
-from bs4 import BeautifulSoup
-
-import pytz
-from timezonefinder import TimezoneFinder
 
 from flask import Flask
-from flask_apscheduler import APScheduler
 from flask import request
 
 from jellyfin_apiclient_python.client import JellyfinClient
