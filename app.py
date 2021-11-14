@@ -1,17 +1,18 @@
 #!/bin/python
 
-import argparse
+import os
 import json
 import toml
+import uuid
+import argparse
+import logging
 from itertools import cycle
 
-from flask import Flask
-from flask import request
+from flask import Flask, request
 
 from jellyfin_apiclient_python.client import JellyfinClient
-import logging
-import uuid
 
+from key import Key, CollisionsList
 
 client = JellyfinClient()
 app = Flask(__name__)
@@ -118,10 +119,6 @@ def get_episodes(serie_id, season_id):
         variables = [name, img_url, episode_id, dl_url, stream_url]
         response += ','.join(variables) + ';'
     return response.rstrip(';')
-
-from key import Key, CollisionsList
-import os
-
 
 def _read_keyfile():
     keys_json = {}
