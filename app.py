@@ -150,10 +150,10 @@ def check_perms(data):
 def access_denied():
     return 'Invalid auth_key!', 403
 
-@app.rout('/')
+@app.route('/')
 def index():
     html = """
-    <p>A simple api to make parsing easier on NeosVR of jellyfin server.</p>
+    <p>A simple api to make parsing easier on NeosVR of a small part of the jellyfin API.</p>
     <p>Check the source code: <a href='https://github.com/brodokk/jellyfin2txt'>https://github.com/brodokk/jellyfin2txt</a></p>
     """
     return html
