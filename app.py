@@ -45,13 +45,13 @@ def get_media_ids(params):
 def get_movies_ids(start_index=0):
     params['StartIndex'] = start_index
     params['IncludeItemTypes'] = 'Movie'
-    params['ParentId'] = 'f137a2dd21bbc1b99aa5c0f6bf02a805'
+    params['ParentId'] = app.config['MOVIES_ID']
     return get_media_ids(params)
 
 def get_series_ids(start_index=0):
     params['StartIndex'] = start_index
     params['IncludeItemTypes'] = 'Series'
-    params['ParentId'] = '767bffe4f11c93ef34b805451a696a4e'
+    params['ParentId'] = app.config['SERIES_ID']
     return get_media_ids(params)
 
 def get_thumbnail(item_id):

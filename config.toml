@@ -1,3 +1,5 @@
 SERVER_URL = ""
 USERNAME = ""
 PASSWORD = ""
+MOVIES_ID = ""
+SERIES_ID = ""
