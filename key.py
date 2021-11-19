@@ -92,6 +92,13 @@ class KeyManager:
         with open(self.keyfile, 'w') as f:
             json.dump(self.keys, f, ensure_ascii=False, cls=EnhancedJSONEncoder)
 
+    def _gen_table(self, keys, headers=["id", "revoked", "comment", "key"]):
+        table = []
+        for key in keys:
+            row = [key.id, key.revoked, key.comment, key.key]
+            table.append(row)
+        return tabulate(table, headers, tablefmt="grid")
+
     def genkey(self, comment=""):
         key = secrets.token_urlsafe(16)
         if not self.keys.contains('key', key):
@@ -100,18 +107,19 @@ class KeyManager:
                 index = str(int(self.keys[-1].id) + 1)
             self.keys.append(Key(index, key, comment, False), 'key')
             self._save_key()
+            print(self._gen_table(self.keys))
+        else:
+            print("Key already exist")
 
     def revokekey(self, id):
         if self.keys.contains('id', id):
             self._revoke_key(id)
+            print(self._gen_table(self.keys))
+        else:
+            print("Key not found")
 
     def listkeys(self):
-        table = []
-        headers = ["id", "revoked", "comment", "key"]
-        for key in self.keys:
-            row = [key.id, key.revoked, key.comment, key.key]
-            table.append(row)
-        print(tabulate(table, headers, tablefmt="grid"))
+        print(self._gen_table(self.keys))
 
 
 keyManager = KeyManager(CollisionsList())
@@ -123,7 +131,7 @@ class keyManagerAction(argparse.Action):
         action = values[0]
         args = {}
         if len(values) == 2:
-            if not re.fullmatch(r'[a-z]+=\d+', values[1]):
+            if not re.fullmatch(r'[a-z]+=[a-zA-Z0-9]+', values[1]):
                 raise KeyManagerActionException("The format should be <field>=<data>")
             args_key = values[1].split('=')[0]
             args_value = values[1].split('=')[1]
