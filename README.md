@@ -2,9 +2,6 @@
 
 Simple API for NeosVr for getting movies and series from a jellyfin server.
 
-You can find a NeosVR client here: <not release yet> and a jellyfin2text server is
-running at: https://jellyfin2txt.neos.spacealicorn.network
-
 The issues for the repository handle both this server and the NeosVR client.
 
 ## Installation
