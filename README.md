@@ -38,14 +38,25 @@ optional arguments:
 
 The API have 4 endpoints:
 
-* `/movies/` Return the list of movies in the format `start_index,count;name,img_url,dl_url,stream_url,trailer_url,external_url`
-* `/series/` Return the list of series in the format `start_index,count;name,img_url,serie_id,external_url`
-* `/series/<serie_id>` Return the list of seasons of the serie in the format `start_index,count;name,img_url,season_id`
-* `/series/<serie_id>/<sesaon_id>` Return the list of episode of the season of the serie in the format
-  `start_index,count;name,img_url,dl_url,stream_url`
+Each endpoint response is sended without a new line at the end. Each entry
+is separated by `;`. But beware the first entry is not a proper entry. Its
+the pagging system information who is not implemented yet in the folowing
+format: `start_index,count`.
+
+* `/movies/` Return the list of movies where an item is in the format `name,img_url,dl_url,stream_url,trailer_url,external_url`
+* `/series/` Return the list of series where an item is in the format `name,img_url,serie_id,external_url`
+* `/series/<serie_id>` Return the list of seasons of the serie where an item is in the format `name,img_url,season_id`
+* `/series/<serie_id>/<sesaon_id>` Return the list of episode of the season of the serie where an item is in the format
+  `name,img_url,dl_url,stream_url`
 
 For authentification the API search in the POST data as a json with the key `auth_key`. The value is
 directly the key.
+
+Example with curl:
+
+```
+curl -d '{"auth_key":"xxxxxxxxxxxx"}' -H "Content-Type: application/json" -X POST https://jellyfin2text.example.com
+```
  
 # TODO
 
