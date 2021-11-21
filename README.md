@@ -6,6 +6,10 @@ The issues for the repository handle both this server and the NeosVR client.
 
 ## Installation
 
+Requirements:
+
+* Python 3.7
+
 ## Usage
 
 For launch the server your just need to run the scrip `app.py`:
