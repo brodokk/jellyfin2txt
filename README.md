@@ -61,7 +61,28 @@ Example with curl:
 ```
 curl -d '{"auth_key":"xxxxxxxxxxxx"}' -H "Content-Type: application/json" -X POST https://jellyfin2text.example.com
 ```
- 
-# TODO
+
+## NeosVr clients
+
+A public folder is available for a basic NeosVr client called `JellyfinClient Beta`:
+neosrec:///G-The-french-microwave/R-cb7e384b-3879-4395-be1f-ea4a74c09705
+
+### Configuration
+
+There is a slot called `DynVar` just under the root of the of the Jellyfin client:
+- `Client/BaseUrl` is the url of the server you want to use as a proxy
+- `Client/AuthKey` is the auth key generated from the `key.py` utility needed
+  to access to the server.
+
+#### Know issues
+
+- The stream url didnt work yet probably because of this issue: https://github.com/Neos-Metaverse/NeosPublic/issues/2812
+- The download url didnt work because Neos dont reconize the file extension
+
+For still being able to see the file of your choice you will need to copy the
+download url and open it into your navigator before importing in Neos. Its
+better to use the Neos cloud as a storage for streame your file.
+
+## TODO
 
 * [ ] Implement paging system
