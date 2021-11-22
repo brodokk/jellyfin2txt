@@ -2,6 +2,9 @@
 
 Simple API for NeosVr for getting movies and series from a jellyfin server.
 
+Note: Like Jellyfin the developers of the server and the clients are not
+responsible of what **YOU** are doing with this tools.
+
 The issues for the repository handle both this server and the NeosVR client.
 
 ## Installation
