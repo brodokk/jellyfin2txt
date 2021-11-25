@@ -72,7 +72,8 @@ neosrec:///G-The-french-microwave/R-cb7e384b-3879-4395-be1f-ea4a74c09705
 
 ### Configuration
 
-There is a slot called `DynVar` just under the root of the of the Jellyfin client:
+The beta version 0.3 have a key where you will need to put the differents
+infomation in a slot called `DynVar` just under the root of the of the Jellyfin client:
 - `Client/BaseUrl` is the url of the server you want to use as a proxy
 - `Client/AuthKey` is the auth key generated from the `key.py` utility needed
   to access to the server.
@@ -84,7 +85,10 @@ There is a slot called `DynVar` just under the root of the of the Jellyfin clien
 
 For still being able to see the file of your choice you will need to copy the
 download url and open it into your navigator before importing in Neos. Its
-better to use the Neos cloud as a storage for streame your file.
+better to use the Neos cloud as a storage for streame your file. There is an
+option in a context menu to copy the url. If you want to save the cassette you
+will need to remove the InventoryLink using the option on the context menu.
+Keep in mind the option to copy the link can break at any time.
 
 ## TODO
 
