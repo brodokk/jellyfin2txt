@@ -93,3 +93,4 @@ Keep in mind the option to copy the link can break at any time.
 ## TODO
 
 * [ ] Implement paging system
+* [ ] Add support for subtitles
