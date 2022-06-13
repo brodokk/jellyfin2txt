@@ -1,6 +1,7 @@
 #!/bin/python
 
 import os
+import sys
 import json
 import toml
 import uuid
@@ -219,6 +220,23 @@ if __name__ == '__main__':
         server["username"] = app.config['USERNAME']
         state = client.authenticate({"Servers": [server]}, discover=False)
     client.start()
+
+    media_folders = client.jellyfin.get_media_folders()
+    item_ids = []
+    items = []
+
+    for item in media_folders['Items']:
+        item_ids.append(item['Id'])
+        items.append([item['Name'], item['Id']])
+
+    if (
+            app.config['MOVIES_ID'] not in item_ids or
+            app.config['SERIES_ID'] not in item_ids
+    ):
+        logging.error('MOVIES_ID or SERIES_ID not found in:')
+        for item in items:
+            logging.error('{}: {}'.format(item[0], item[1]))
+        sys.exit(1)
 
     app.run(host='0.0.0.0', port=args.port)
 
