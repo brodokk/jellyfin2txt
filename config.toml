@@ -1,5 +1,14 @@
 SERVER_URL = ""
 USERNAME = ""
 PASSWORD = ""
+
+# Use either the *_ID or directly the named one
+# The named one will automaticly detect the *_ID
+
 MOVIES_ID = ""
 SERIES_ID = ""
+
+# Or
+
+MOVIES = ""
+SERIES = ""

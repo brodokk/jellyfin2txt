@@ -40,13 +40,13 @@ def get_media_ids(params):
 def get_movies_ids(start_index=0):
     params['StartIndex'] = start_index
     params['IncludeItemTypes'] = 'Movie'
-    params['ParentId'] = app.config['MOVIES_ID']
+    params['ParentId'] = client.movies_id
     return get_media_ids(params)
 
 def get_series_ids(start_index=0):
     params['StartIndex'] = start_index
     params['IncludeItemTypes'] = 'Series'
-    params['ParentId'] = app.config['SERIES_ID']
+    params['ParentId'] = client.series_id
     return get_media_ids(params)
 
 def get_thumbnail(item_id):
@@ -223,20 +223,38 @@ if __name__ == '__main__':
 
     media_folders = client.jellyfin.get_media_folders()
     item_ids = []
-    items = []
+    items = {}
 
     for item in media_folders['Items']:
         item_ids.append(item['Id'])
-        items.append([item['Name'], item['Id']])
+        items[item['Name']] = item['Id']
 
-    if (
-            app.config['MOVIES_ID'] not in item_ids or
-            app.config['SERIES_ID'] not in item_ids
-    ):
-        logging.error('MOVIES_ID or SERIES_ID not found in:')
-        for item in items:
-            logging.error('{}: {}'.format(item[0], item[1]))
+    def item_not_found(item, key):
+        logging.error('{} ({}) not found in:'.format(item, key))
+        for item_name, item_id in items.items():
+            logging.error('{}: {}'.format(item_name, item_id))
         sys.exit(1)
+
+    if not app.config.get('MOVIES_ID'):
+        if app.config.get('MOVIES') not in items.keys():
+            item_not_found('MOVIES', app.config.get('MOVIES'))
+        else:
+            client.movies_id = items[app.config['MOVIES']]
+    if not app.config.get('SERIES_ID'):
+        if app.config.get('SERIES') not in items.keys():
+            item_not_found('SERIES', app.config.get('SERIES'))
+        else:
+            client.series_id = items[app.config['SERIES']]
+    if (
+        not getattr(client, 'movies_id', False) and
+        app.config.get('MOVIES_ID') not in items.values()
+    ):
+        item_not_found('MOVIES_ID', app.config.get('MOVIES_ID'))
+    if (
+        not getattr(client, 'series_id', False) and
+        app.config.get('SERIES_ID') not in items.values()
+    ):
+        item_not_found('SERIES_ID', app.config.get('SERIES_ID'))
 
     app.run(host='0.0.0.0', port=args.port)
 
