@@ -163,7 +163,6 @@ if __name__ == '__main__':
         args = parser.parse_args()
         print(parser.print_help())
     except Exception as e:
-        raise e
-        if type(e).__name__ not in  ['KeyManagerException', 'KeyManagerActionException']:
+        if e.__class__.__name__ not in  ['KeyManagerException', 'KeyManagerActionException']:
             raise e
         print(parser.print_help())
