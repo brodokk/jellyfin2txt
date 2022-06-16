@@ -48,10 +48,14 @@ The API have 4 endpoints:
 Each endpoint response is sended without a new line at the end. Each entry
 is separated by `;`. But beware the first entry is not a proper entry. Its
 the pagging system information who is not implemented yet in the folowing
-format: `start_index,count`.
+format: `start_index,total_record_count`.
 
-* `/movies/` Return the list of movies where an item is in the format `name,img_url,dl_url,stream_url,trailer_url,external_url`
-* `/series/` Return the list of series where an item is in the format `name,img_url,serie_id,external_url`
+* `/movies/` Return the list of movies where an item is in the format `name,img_url,dl_url,stream_url,trailer_url,external_url`. This endpoint also support two url parameters:
+	* `StartIndex` that you can use for start from a special index.
+	* `Limit` that you can use for set a limit of the number of item to get from the server.
+* `/series/` Return the list of series where an item is in the format `name,img_url,serie_id,external_url`. This endpoint also support two url parameters:
+	* `StartIndex` that you can use for start from a special index.
+	* `Limit` that you can use for set a limit of the number of item to get from the server.
 * `/series/<serie_id>` Return the list of seasons of the serie where an item is in the format `name,img_url,season_id`
 * `/series/<serie_id>/<sesaon_id>` Return the list of episode of the season of the serie where an item is in the format
   `name,img_url,dl_url,stream_url`
