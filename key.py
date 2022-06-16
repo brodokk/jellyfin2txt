@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import os
 import re
 import argparse
@@ -144,6 +145,7 @@ class keyManagerAction(argparse.Action):
                 getattr(keyManager, action)(**args)
             else:
                 raise KeyManagerException
+        sys.exit()
 
 
 if __name__ == '__main__':
@@ -159,6 +161,7 @@ if __name__ == '__main__':
         help='List all the key available')
     try:
         args = parser.parse_args()
+        print(parser.print_help())
     except Exception as e:
         raise e
         if type(e).__name__ not in  ['KeyManagerException', 'KeyManagerActionException']:
