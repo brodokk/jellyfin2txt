@@ -53,8 +53,8 @@ def get_thumbnail(item_id):
     server_url = app.config['SERVER_URL']
     return f'{server_url}/Items/{item_id}/Images/Primary'
 
-def get_movies(start_id=0):
-    movies_ids = get_movies_ids(start_id)
+def get_movies(start_index=0):
+    movies_ids = get_movies_ids(start_index)
     response = "{},{};".format(
         movies_ids['StartIndex'], movies_ids['TotalRecordCount']
     )
@@ -75,8 +75,8 @@ def get_movies(start_id=0):
         response += ','.join(variables) + ';'
     return response.rstrip(';')
 
-def get_series(start_id=0):
-    series_ids = get_series_ids()
+def get_series(start_index=0):
+    series_ids = get_series_ids(start_index)
     response = "{},{};".format(
         series_ids['StartIndex'], series_ids['TotalRecordCount']
     )
@@ -162,13 +162,13 @@ def index():
 @app.route('/movies', methods=['POST'])
 def movies():
     if check_perms(request.data):
-        return get_movies()
+        return get_movies(request.args.get("StartIndex", 0))
     return access_denied()
 
 @app.route('/series', methods=['POST'])
 def series():
     if check_perms(request.data):
-        return get_series()
+        return get_series(request.args.get("StartIndex", 0))
     return access_denied()
 
 @app.route('/series/<serie_id>', methods=['POST'])
