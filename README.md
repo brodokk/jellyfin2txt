@@ -48,7 +48,7 @@ The API have 4 endpoints:
 Each endpoint response is sended without a new line at the end. Each entry
 is separated by `;`. But beware the first entry is not a proper entry. Its
 the pagging system information who is not implemented yet in the folowing
-format: `start_index,count`.
+format: `start_index,total_record_count`.
 
 * `/movies/` Return the list of movies where an item is in the format `name,img_url,dl_url,stream_url,trailer_url,external_url`. This endpoint also support the url parameter `StartIndex` that you can use for start from a special index.
 * `/series/` Return the list of series where an item is in the format `name,img_url,serie_id,external_url`. This endpoint also support the url parameter `StartIndex` that you can use for start from a special index.
