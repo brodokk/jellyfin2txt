@@ -53,9 +53,15 @@ format: `start_index,total_record_count`.
 * `/movies/` Return the list of movies where an item is in the format `name,img_url,dl_url,stream_url,trailer_url,external_url`. This endpoint also support two url parameters:
 	* `StartIndex` that you can use for start from a special index.
 	* `Limit` that you can use for set a limit of the number of item to get from the server.
+        * `ThumbFillHeight` that you can use for change the height of the thumbnail. 
+	* `ThumbFillWidth` that you can use for change the width of the thumbnail.
+	* `ThumbQuality` that you can use for change the quality of the thumbnail, in percent.
 * `/series/` Return the list of series where an item is in the format `name,img_url,serie_id,external_url`. This endpoint also support two url parameters:
 	* `StartIndex` that you can use for start from a special index.
 	* `Limit` that you can use for set a limit of the number of item to get from the server.
+	* `ThumbFillHeight` that you can use for change the height of the thumbnail. 
+	* `ThumbFillWidth` that you can use for change the width of the thumbnail.
+	* `ThumbQuality` that you can use for change the quality of the thumbnail, in percent.
 * `/series/<serie_id>` Return the list of seasons of the serie where an item is in the format `name,img_url,season_id`
 * `/series/<serie_id>/<sesaon_id>` Return the list of episode of the season of the serie where an item is in the format
   `name,img_url,dl_url,stream_url`

@@ -32,7 +32,6 @@ params = {
 def get_media_ids(params):
     items = []
     media = client.jellyfin.users('/Items', params=params)
-    print(media)
     for item in media['Items']:
         items.append(item['Id'])
     media['Items'] = items
@@ -52,11 +51,17 @@ def get_series_ids(start_index=0, limit=100):
     params['ParentId'] = client.series_id
     return get_media_ids(params)
 
-def get_thumbnail(item_id):
+def get_thumbnail(item_id, fillHeight=320, fillWidth=213, quality=96):
     server_url = app.config['SERVER_URL']
-    return f'{server_url}/Items/{item_id}/Images/Primary'
+    return (
+        f'{server_url}/Items/{item_id}/Images/Primary?fillHeight={fillHeight}'
+        f'&fillWidth={fillWidth}&quality={quality}'
+    )
 
-def get_movies(start_index=0, limit=100):
+def get_movies(
+    start_index=0, limit=100, thumb_fill_height=320, thumb_fill_width=213,
+    thumb_quality=96
+):
     movies_ids = get_movies_ids(start_index, limit)
     response = "{},{};".format(
         movies_ids['StartIndex'], movies_ids['TotalRecordCount']
@@ -73,12 +78,15 @@ def get_movies(start_index=0, limit=100):
                 external_link = external_url['Url']
         dl_url = client.jellyfin.download_url(movie_id)
         stream_url = client.jellyfin.video_url(movie_id)
-        img_url = get_thumbnail(movie_id)
+        img_url = get_thumbnail(movie_id, thumb_fill_height, thumb_fill_width, thumb_quality)
         variables = [name, img_url, dl_url, stream_url, trailer_url, external_link]
         response += ','.join(variables) + ';'
     return response.rstrip(';')
 
-def get_series(start_index=0, limit=100):
+def get_series(
+    start_index=0, limit=100, thumb_fill_height=320, thumb_fill_width=213,
+    thumb_quality=96
+):
     series_ids = get_series_ids(start_index, limit)
     response = "{},{};".format(
         series_ids['StartIndex'], series_ids['TotalRecordCount']
@@ -90,7 +98,7 @@ def get_series(start_index=0, limit=100):
         for external_url in serie['ExternalUrls']:
             if external_url['Name'] == 'IMDb':
                 external_link = external_url['Url']
-        img_url = get_thumbnail(serie_id)
+        img_url = get_thumbnail(serie_id, thumb_fill_height, thumb_fill_width, thumb_quality)
         variables = [name, img_url, serie_id, external_link]
         response += ','.join(variables) + ';'
     return response.rstrip(';')
@@ -168,6 +176,9 @@ def movies():
         return get_movies(
             request.args.get("StartIndex", 0),
             request.args.get("Limit", 100),
+            request.args.get("ThumbFillHeight", 320),
+            request.args.get("ThumbFillWidth", 213),
+            request.args.get("ThumbQuality", 96),
         )
     return access_denied()
 
@@ -177,6 +188,9 @@ def series():
         return get_series(
             request.args.get("StartIndex", 0),
             request.args.get("Limit", 100),
+            request.args.get("ThumbFillHeight", 320),
+            request.args.get("ThumbFillWidth", 213),
+            request.args.get("ThumbQuality", 96),
         )
     return access_denied()
 
