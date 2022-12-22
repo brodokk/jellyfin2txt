@@ -1,5 +1,19 @@
 #!/bin/python
 
+from typing import Optional
+from cleanit import Config as cleanitConfig
+from cleanit import Subtitle as cleanitSubtitle
+from cleanit.rule import Change
+import tempfile
+import urllib.request
+import os
+from pathlib import Path
+import urllib.request
+from pyasstosrt import Subtitle as pyasstosrtSubtitle
+import tempfile
+import os
+from pathlib import Path
+
 import os
 import sys
 import json
@@ -162,6 +176,398 @@ def check_perms(data):
 def access_denied():
     return 'Invalid auth_key!', 403
 
+subtitles_output_folder = Path("subtitles")
+
+def download(item_id, name):
+    data = client.jellyfin.download_url(item_id)
+
+    from time import sleep
+    from urllib.request import urlopen
+
+    from rich.progress import wrap_file
+
+    from functools import partial
+
+    response = urlopen(data)
+    size = int(response.headers["Content-Length"])
+
+    
+    from rich.progress import (
+        BarColumn,
+        DownloadColumn,
+        Progress,
+        TaskID,
+        TextColumn,
+        TimeRemainingColumn,
+        TransferSpeedColumn,
+    )
+
+    from threading import Event
+
+    import signal
+
+    progress = Progress(
+        TextColumn("[bold blue]{task.fields[filename]}", justify="right"),
+        BarColumn(bar_width=None),
+        "[progress.percentage]{task.percentage:>3.1f}%",
+        "•",
+        DownloadColumn(),
+        "•",
+        TransferSpeedColumn(),
+        "•",
+        TimeRemainingColumn(),
+    )
+
+    done_event = Event()
+
+
+    def handle_sigint(signum, frame):
+        done_event.set()
+
+
+    #signal.signal(signal.SIGINT, handle_sigint)
+
+    with progress:
+        task_id = progress.add_task('download', filename=name, total=size, start=False)
+        with open(name, 'wb') as dest_file:
+            progress.start_task(task_id)
+            for dat in iter(partial(response.read, 32768), b''):
+                dest_file.write(dat)
+                progress.update(task_id, advance=len(dat))
+                if done_event.is_set():
+                    exit(1)
+
+    #with urllib.request.urlopen(data) as f:
+    #    html = f.read().decode('utf-8')
+    return name
+
+def clean_sub(sub_file, final_filename):
+    sub = cleanitSubtitle(sub_file)
+    cfg = cleanitConfig()
+    rules = cfg.select_rules(tags={'no-style', 'ocr', 'tidy', 'no-spam'})
+    if sub.clean(rules):
+        sub.save(f"{subtitles_output_folder/final_filename}")
+
+def get_subtitles(item_id):
+    profile = {
+            "Name": "Kodi",
+            "MusicStreamingTranscodingBitrate": 1280000,
+            "TimelineOffsetSeconds": 5,
+            "ResponseProfiles": [],
+            "ContainerProfiles": [],
+            "CodecProfiles": [],
+            "SubtitleProfiles": [
+                {
+                    "Format": "srt",
+                    "Method": "External"
+                },
+                {
+                    "Format": "sub",
+                    "Method": "External"
+                },
+                {
+                    "Format": "ssa",
+                    "Method": "External"
+                },
+                {
+                    "Format": "ttml",
+                    "Method": "External"
+                },
+                {
+                    "Format": "vtt",
+                    "Method": "External"
+                }
+            ]
+        }
+    
+    #item_id='24b6d39b4779259fda28d856e9479b66' # psg quick
+    item_id='ce096db83d3454055cf0b5315284c947' # pgs slow: a lot
+    #item_id='32b81e45fa24eef35b6305bbd5c2329a'
+    #item_id='c792916f205221d1d84c73baad5e9814'
+    data = client.jellyfin.get_play_info(
+        item_id=item_id,
+        profile=profile
+    )
+    name = data['MediaSources'][0]['Path'].split('/')[-1]
+
+    subtitles = []
+
+    subtitles_file_supported = ['subrip', 'ass', 'PGSSUB', 'mov_text']
+    neos_converted_subtitles_file_supported = ['ass', 'mov_text']
+    neos_extracted_subtitles_file_supported = ['PGSSUB']
+    
+    for media in data['MediaSources'][0]['MediaStreams']:
+        if media['Type'] == 'Subtitle':
+            format_supported = False
+            codec = media["Codec"]
+            if codec in subtitles_file_supported:
+                format_supported = True
+                if media['IsExternal'] or media['IsTextSubtitleStream'] or media['SupportsExternalStream']:
+                    url = f"{app.config['SERVER_URL']}{media['DeliveryUrl']}"
+                    if codec not in neos_converted_subtitles_file_supported:
+                            format_supported = False
+                elif  media['Codec'] not in neos_extracted_subtitles_file_supported:
+                    format_supported = False           
+                    
+            if format_supported:
+                subtitles.append(media['DisplayTitle'])
+            else:
+                print(f'Warning format {codec} not suported for item id {item_id}')
+                if media['IsExternal'] or media['IsTextSubtitleStream'] or media['SupportsExternalStream']:
+                    print('This format seems to be easly convertable in srt')
+                url = f"{app.config['SERVER_URL']}{media['DeliveryUrl']}"
+                print(url)
+            
+    for subtitle in subtitles:
+        print(subtitle)
+    return subtitles
+
+def get_subtitle(item_id, subtitle_name):
+    profile = {
+            "Name": "Kodi",
+            "MusicStreamingTranscodingBitrate": 1280000,
+            "TimelineOffsetSeconds": 5,
+            "ResponseProfiles": [],
+            "ContainerProfiles": [],
+            "CodecProfiles": [],
+            "SubtitleProfiles": [
+                {
+                    "Format": "srt",
+                    "Method": "External"
+                },
+                {
+                    "Format": "sub",
+                    "Method": "External"
+                },
+                {
+                    "Format": "ssa",
+                    "Method": "External"
+                },
+                {
+                    "Format": "ttml",
+                    "Method": "External"
+                },
+                {
+                    "Format": "vtt",
+                    "Method": "External"
+                }
+            ]
+        }
+    
+    item_id='24b6d39b4779259fda28d856e9479b66' # psg quick
+    #item_id='ce096db83d3454055cf0b5315284c947' # pgs slow: a lot
+    #item_id='32b81e45fa24eef35b6305bbd5c2329a'
+    #item_id='c792916f205221d1d84c73baad5e9814'
+    data = client.jellyfin.get_play_info(
+        item_id=item_id,
+        profile=profile
+    )
+    name = data['MediaSources'][0]['Path'].split('/')[-1]
+
+    subtitles_file_supported = ['subrip', 'ass', 'PGSSUB', 'mov_text']
+    neos_subtitles_file_supported = ['subrip']
+    
+    for media in data['MediaSources'][0]['MediaStreams']:
+        format_supported = False
+        if media['Type'] == 'Subtitle':
+            if media['DisplayTitle'] != subtitle_name:
+                print('incorrect name')
+            if media['Codec'] not in subtitles_file_supported:
+                print('incorrect codec')
+            codec = media["Codec"]
+            final_filename = Path(f"{name.replace('/', '')}.{media['DisplayTitle'].replace('/', '')}.srt")
+            if media['IsExternal'] or media['IsTextSubtitleStream'] or media['SupportsExternalStream']:
+                url = f"{app.config['SERVER_URL']}{media['DeliveryUrl']}"
+                if codec not in neos_subtitles_file_supported:
+                    if codec == 'ass':
+                        with tempfile.NamedTemporaryFile() as sub_temp_file:
+                            urllib.request.urlretrieve(url, sub_temp_file.name)
+                            sub = pyasstosrtSubtitle(sub_temp_file.name)
+                            tmp_filename = sub_temp_file.name.split('/')[-1]
+                            sub.export(output_dir=subtitles_output_folder)
+                            os.replace(f"{subtitles_output_folder/tmp_filename}.srt", f"{subtitles_output_folder/final_filename}")
+                    elif codec == 'mov_text':
+                        with tempfile.NamedTemporaryFile() as sub_temp_file:
+                            urllib.request.urlretrieve(url, sub_temp_file.name)
+                            clean_sub(sub_temp_file.name, final_filename)
+                    else:
+                        format_supported = False
+                format_supported = True
+            elif  media['Codec'] == 'PGSSUB':
+                print('go pgsrip')
+                with tempfile.TemporaryDirectory(dir='tmp') as sub_temp_dir:
+                    #urllib.request.urlretrieve(url, sub_temp_dir)
+                    #clean_sub(sub_temp_file.name, final_filename)
+                    sub_temp_file = download(item_id, Path(sub_temp_dir) / Path(name))
+                    from sh import pgsrip
+                    from pgsrip import pgsrip, Mkv, Options
+                    from babelfish import Language
+
+                    media_file = Mkv(sub_temp_file)
+                    options = Options(languages={Language('eng')}, overwrite=True, one_per_lang=False)
+                    pgsrip.rip(media_file, options)
+                    from sh import ls
+
+                    print(ls('-alh', sub_temp_dir))
+                    print(sub_temp_file)
+                    #print(sub_temp_file)
+                    #import time
+                    #time.sleep(10000)
+                    #pgsrip('-a', sub_temp_file)
+
+                    for entry in Path(sub_temp_dir).iterdir():
+                        if entry.is_file() and entry.suffix == '.srt':
+                            print(entry.stem.replace('/', ''))
+                            final_filename = Path(f"{entry.stem.replace('/', '')}.srt")
+                            clean_sub(sub_temp_file, f"{subtitles_output_folder/final_filename}")
+                            url = 'uwu'
+                # for extract pgsrip use https://github.com/ratoaq2/pgsrip
+            else:
+                format_supported = False           
+                
+            if format_supported:
+                print(media)
+                print(url)
+                print(subtitles)
+                print(media['DisplayTitle'])
+                return url
+            else:
+                print(f"Warning format {media['DisplayTitle']} {codec} not suported for item id {item_id}")
+                if media['IsExternal'] or media['IsTextSubtitleStream'] or media['SupportsExternalStream']:
+                    print('This format seems to be easly convertable in srt')
+                url = f"{app.config['SERVER_URL']}{media['DeliveryUrl']}"
+                print(url)
+
+        print("err")
+    
+    return "Invalid id?"
+
+def get_subtitles_old(item_id):
+    profile = {
+            "Name": "Kodi",
+            "MusicStreamingTranscodingBitrate": 1280000,
+            "TimelineOffsetSeconds": 5,
+            "ResponseProfiles": [],
+            "ContainerProfiles": [],
+            "CodecProfiles": [],
+            "SubtitleProfiles": [
+                {
+                    "Format": "srt",
+                    "Method": "External"
+                },
+                {
+                    "Format": "sub",
+                    "Method": "External"
+                },
+                {
+                    "Format": "ssa",
+                    "Method": "External"
+                },
+                {
+                    "Format": "ttml",
+                    "Method": "External"
+                },
+                {
+                    "Format": "vtt",
+                    "Method": "External"
+                }
+            ]
+        }
+    
+    #item_id='24b6d39b4779259fda28d856e9479b66' # psg quick
+    #item_id='ce096db83d3454055cf0b5315284c947' # pgs slow: a lot
+    #item_id='32b81e45fa24eef35b6305bbd5c2329a'
+    #item_id='c792916f205221d1d84c73baad5e9814'
+    data = client.jellyfin.get_play_info(
+        item_id=item_id,
+        profile=profile
+    )
+    print(data['MediaSources'][0]['Name'])
+    name = data['MediaSources'][0]['Path'].split('/')[-1]
+
+    subtitles = []
+
+    subtitles_file_supported = ['subrip', 'ass', 'PGSSUB', 'mov_text']
+    neos_subtitles_file_supported = ['subrip']
+    
+    for media in data['MediaSources'][0]['MediaStreams']:
+        if media['Type'] == 'Subtitle':
+            format_supported = False
+            codec = media["Codec"]
+            if codec in subtitles_file_supported:
+                format_supported = True
+                final_filename = Path(f"{name.replace('/', '')}.{media['DisplayTitle'].replace('/', '')}.srt")
+                if media['IsExternal'] or media['IsTextSubtitleStream'] or media['SupportsExternalStream']:
+                    index = media["Index"]
+                    #url = f"{app.config['SERVER_URL']}/Videos/{item_id}/{item_id}/Subtitles/{index}/0/Stream.{codec}"
+                    url = f"{app.config['SERVER_URL']}{media['DeliveryUrl']}"
+                    if codec not in neos_subtitles_file_supported:
+                        if codec == 'ass':
+                            with tempfile.NamedTemporaryFile() as sub_temp_file:
+                                urllib.request.urlretrieve(url, sub_temp_file.name)
+                                sub = pyasstosrtSubtitle(sub_temp_file.name)
+                                tmp_filename = sub_temp_file.name.split('/')[-1]
+                                sub.export(output_dir=subtitles_output_folder)
+                                os.replace(f"{subtitles_output_folder/tmp_filename}.srt", f"{subtitles_output_folder/final_filename}")
+                        elif codec == 'mov_text':
+                            with tempfile.NamedTemporaryFile() as sub_temp_file:
+                                urllib.request.urlretrieve(url, sub_temp_file.name)
+                                clean_sub(sub_temp_file.name, final_filename)
+                        else:
+                            format_supported = False
+                elif  media['Codec'] == 'PGSSUB':
+                    print('go pgsrip')
+                    with tempfile.TemporaryDirectory(dir='tmp') as sub_temp_dir:
+                        #urllib.request.urlretrieve(url, sub_temp_dir)
+                        #clean_sub(sub_temp_file.name, final_filename)
+                        sub_temp_file = download(item_id, Path(sub_temp_dir) / Path(name))
+                        from sh import pgsrip
+                        from pgsrip import pgsrip, Mkv, Options
+                        from babelfish import Language
+
+                        media_file = Mkv(sub_temp_file)
+                        options = Options(languages={Language('eng')}, overwrite=True, one_per_lang=False)
+                        pgsrip.rip(media_file, options)
+                        from sh import ls
+
+                        print(ls('-alh', sub_temp_dir))
+                        print(sub_temp_file)
+                        #print(sub_temp_file)
+                        #import time
+                        #time.sleep(10000)
+                        #pgsrip('-a', sub_temp_file)
+
+                        for entry in Path(sub_temp_dir).iterdir():
+                            if entry.is_file() and entry.suffix == '.srt':
+                                print(entry.stem.replace('/', ''))
+                                final_filename = Path(f"{entry.stem.replace('/', '')}.srt")
+                                clean_sub(sub_temp_file, f"{subtitles_output_folder/final_filename}")
+                                url = 'uwu'
+                    # for extract pgsrip use https://github.com/ratoaq2/pgsrip
+                else:
+                    format_supported = False           
+                    
+            if format_supported:
+                print(media)
+                print(url)
+                print(subtitles)
+                print(media['DisplayTitle'])
+                subtitles.append(f"{media['DisplayTitle']}`{url}")
+            else:
+                print(f'Warning format {codec} not suported for item id {item_id}')
+                if media['IsExternal'] or media['IsTextSubtitleStream'] or media['SupportsExternalStream']:
+                    print('This format seems to be easly convertable in srt')
+                url = f"{app.config['SERVER_URL']}{media['DeliveryUrl']}"
+                print(url)
+            
+    for subtitle in subtitles:
+        print(subtitle)
+    return subtitles
+
+
+
+
+
 @app.route('/')
 def index():
     html = """
@@ -205,6 +611,167 @@ def episodes(serie_id, season_id):
     if check_perms(request.data):
         return get_episodes(serie_id, season_id)
     return access_denied()
+
+@app.route('/subtitles/<item_id>', methods=['POST'])
+def subtitles(item_id):
+    if check_perms(request.data):
+        return get_subtitles(item_id)
+    return access_denied()
+
+@app.route('/subtitles/<item_id>/<subtitle_name>', methods=['POST'])
+def subtitle(item_id, subtitle_name):
+    if check_perms(request.data):
+        return get_subtitle(item_id, subtitle_name)
+    return access_denied()
+
+USER_APP_NAME = "Jellyfin2txt"
+
+class Settings:
+  transcode_h265 = False
+  remote_kbps: int = 10000
+  local_kbps: int = 2147483
+  transcode_hi10p: bool = False
+  always_transcode: bool = False
+  transcode_to_h265: bool = False
+
+settings = Settings()
+
+
+def get_profile(
+    is_remote: bool = False,
+    video_bitrate: Optional[int] = None,
+    force_transcode: bool = False,
+    is_tv: bool = False,
+):
+    if video_bitrate is None:
+        if is_remote:
+            video_bitrate = settings.remote_kbps
+        else:
+            video_bitrate = settings.local_kbps
+
+    if settings.transcode_h265:
+        transcode_codecs = "h264,mpeg4,mpeg2video"
+    elif settings.transcode_to_h265:
+        transcode_codecs = "h265,hevc,h264,mpeg4,mpeg2video"
+    else:
+        transcode_codecs = "h264,h265,hevc,mpeg4,mpeg2video"
+
+    profile = {
+        "Name": USER_APP_NAME,
+        "MaxStreamingBitrate": video_bitrate * 1000,
+        "MaxStaticBitrate": video_bitrate * 1000,
+        "MusicStreamingTranscodingBitrate": 1280000,
+        "TimelineOffsetSeconds": 5,
+        "TranscodingProfiles": [
+            {"Type": "Audio"},
+            {
+                "Container": "ts",
+                "Type": "Video",
+                "Protocol": "hls",
+                "AudioCodec": "aac,mp3,ac3,opus,flac,vorbis",
+                "VideoCodec": transcode_codecs,
+                "MaxAudioChannels": "6",
+            },
+            {"Container": "jpeg", "Type": "Photo"},
+        ],
+        "DirectPlayProfiles": [{"Type": "Video"}, {"Type": "Audio"}, {"Type": "Photo"}],
+        "ResponseProfiles": [],
+        "ContainerProfiles": [],
+        "CodecProfiles": [],
+        "SubtitleProfiles": [
+            {"Format": "srt", "Method": "External"},
+            {"Format": "srt", "Method": "Embed"},
+            {"Format": "ass", "Method": "External"},
+            {"Format": "ass", "Method": "Embed"},
+            {"Format": "sub", "Method": "Embed"},
+            {"Format": "sub", "Method": "External"},
+            {"Format": "ssa", "Method": "Embed"},
+            {"Format": "ssa", "Method": "External"},
+            {"Format": "smi", "Method": "Embed"},
+            {"Format": "smi", "Method": "External"},
+            # Jellyfin currently refuses to serve these subtitle types as external.
+            {"Format": "pgssub", "Method": "Embed"},
+            # {
+            #    "Format": "pgssub",
+            #    "Method": "External"
+            # },
+            {"Format": "dvdsub", "Method": "Embed"},
+            # {
+            #    "Format": "dvdsub",
+            #    "Method": "External"
+            # },
+            {"Format": "pgs", "Method": "Embed"},
+            # {
+            #    "Format": "pgs",
+            #    "Method": "External"
+            # }
+        ],
+    }
+
+    if settings.transcode_hi10p:
+        profile["CodecProfiles"].append(
+            {
+                "Type": "Video",
+                "codec": "h264",
+                "Conditions": [
+                    {
+                        "Condition": "LessThanEqual",
+                        "Property": "VideoBitDepth",
+                        "Value": "8",
+                    }
+                ],
+            }
+        )
+
+    if settings.always_transcode or force_transcode:
+        profile["DirectPlayProfiles"] = []
+
+    if is_tv:
+        profile["TranscodingProfiles"].insert(
+            0,
+            {
+                "Container": "ts",
+                "Type": "Video",
+                "AudioCodec": "mp3,aac",
+                "VideoCodec": "h264",
+                "Context": "Streaming",
+                "Protocol": "hls",
+                "MaxAudioChannels": "2",
+                "MinSegments": "1",
+                "BreakOnNonKeyFrames": True,
+            },
+        )
+
+    return profile
+
+@app.route('/movies_id', methods=['POST'])
+def movies_id():
+    item_id = "4e25807f0e7f80b36466b7559fad73b5"
+    profile = "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQgMTAuMDsgV2luNjQ7IHg2NDsgcnY6OTUuMCkgR2Vja28vMjAxMDAxMDEgRmlyZWZveC85NS4wfDE2NDIwOTExODk4NzM1"
+    is_playback = True
+    sid = 3
+    aid = 1
+    args = {
+            'UserId': "9bc44fa4c1204b2b8a78e58145de169d",
+            'MaxStreamingBitrate': 4000000,
+            'AutoOpenLiveStream': is_playback,
+            'StartTimeTicks': 11603630000,
+            'DeviceId': "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQgMTAuMDsgV2luNjQ7IHg2NDsgcnY6OTUuMCkgR2Vja28vMjAxMDAxMDEgRmlyZWZveC85NS4wfDE2NDIwOTExODk4NzM1",
+            'IsPlayback': is_playback
+    }
+    args['SubtitleStreamIndex'] = sid
+    args['AudioStreamIndex'] = aid
+    args['MediaSourceId'] = item_id
+
+    #new_sync_client = client.jellyfin.new_sync_play_v2('test')
+    #print(type(new_sync_client))
+    #print(dir(new_sync_client))
+    #print(new_sync_client)
+    sync_play = client.jellyfin.get_sync_play(item_id)
+    print(sync_play)
+    join = client.jellyfin.join_sync_play("43032e1fd8ec4e6f8accf5a1595b1ae0")
+    print(join)
+  
 
 
 if __name__ == '__main__':
@@ -279,6 +846,10 @@ if __name__ == '__main__':
     ):
         item_not_found('SERIES_ID', app.config.get('SERIES_ID'))
 
+    #get_subtitles('f17589e06f4724ed4d416449efe51b8a')
+    #exit()
+
     app.run(host='0.0.0.0', port=args.port)
 
     client.stop()
+
