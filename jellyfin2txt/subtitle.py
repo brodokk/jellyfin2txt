@@ -5,7 +5,7 @@ from cleanit import Subtitle as cleanitSubtitle
 from pyasstosrt import Subtitle as pyasstosrtSubtitle
 import tempfile
 
-from config import client, app
+from jellyfin2txt.config import client, app
 
 class Subtitle:
     subtitles_output_folder = Path("subtitles")

@@ -1,5 +1,6 @@
 import toml
 import uuid
+import os
 from flask import Flask
 from jellyfin_apiclient_python.client import JellyfinClient
 
@@ -25,7 +26,7 @@ params = {
 client = JellyfinClient()
 app = Flask(__name__)
 
-app.config.from_file('config.toml', load=toml.load)
+app.config.from_file(os.getcwd() + '/config.toml', load=toml.load)
 
 client.config.data["app.default"] = True
 version = "0.1"

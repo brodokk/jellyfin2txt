@@ -1,4 +1,6 @@
-from config import client, params, app
+from typing import Optional
+
+from jellyfin2txt.config import client, params, app
 
 class Media:
 

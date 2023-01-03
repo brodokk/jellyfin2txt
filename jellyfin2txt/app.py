@@ -13,13 +13,11 @@ import logging
 
 from flask import request
 
-from key import Key
-
-from config import client, app, params, settings
-
-from media import Media
-from subtitle import Subtitle
-from utils import _read_keyfile
+from jellyfin2txt.key import Key
+from jellyfin2txt.config import client, app, params, settings
+from jellyfin2txt.media import Media
+from jellyfin2txt.subtitle import Subtitle
+from jellyfin2txt.utils import _read_keyfile
 
 def check_perms(data):
     data_str = data.decode('utf-8')
@@ -124,10 +122,9 @@ def movies_id():
     print(sync_play)
     join = client.jellyfin.join_sync_play("43032e1fd8ec4e6f8accf5a1595b1ae0")
     print(join)
-  
 
 
-if __name__ == '__main__':
+def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -185,3 +182,5 @@ if __name__ == '__main__':
 
     client.stop()
 
+if __name__ == '__main__':
+    main()

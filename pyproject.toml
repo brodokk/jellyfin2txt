@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "jellyfin2txt"
+version = "0.1.0"
+description = "Simple API for NeosVr for getting movies and series from a jellyfin server."
+authors = ["brodokk <brodokk@brodokk.space>"]
+license = "GPLv3.0"
+
+[tool.poetry.dependencies]
+python = "^3.7"
+Flask = "^2.1.1"
+jellyfin-apiclient-python = {git = "https://github.com/jellyfin/jellyfin-apiclient-python", rev = "3442ef57d5f8d60dc7a7419d44ce0f4d2f26337f"}
+tabulate = "^0.8.9"
+toml = "^0.10.2"
+
+[tool.poetry.scripts]
+jellyfin2txt = "jellyfin2txt.app:main"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
