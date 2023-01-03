@@ -5,56 +5,58 @@ from cleanit import Subtitle as cleanitSubtitle
 from pyasstosrt import Subtitle as pyasstosrtSubtitle
 import tempfile
 
+import logging
+
+from  jellyfin_apiclient_python.exceptions import HTTPException as jellyfin_apiclient_python_HTTPException
+
 from jellyfin2txt.config import client, app
 
 class Subtitle:
     subtitles_output_folder = Path("subtitles")
+    profile = {
+        "Name": "Jellyfin2txt",
+        "MusicStreamingTranscodingBitrate": 1280000,
+        "TimelineOffsetSeconds": 5,
+        "ResponseProfiles": [],
+        "ContainerProfiles": [],
+        "CodecProfiles": [],
+        "SubtitleProfiles": [
+            {
+                "Format": "srt",
+                "Method": "External"
+            },
+            {
+                "Format": "sub",
+                "Method": "External"
+            },
+            {
+                "Format": "ssa",
+                "Method": "External"
+            },
+            {
+                "Format": "ttml",
+                "Method": "External"
+            },
+            {
+                "Format": "vtt",
+                "Method": "External"
+            }
+        ]
+    }
 
     @staticmethod
     def subtitles(item_id):
-        profile = {
-            "Name": "Kodi",
-            "MusicStreamingTranscodingBitrate": 1280000,
-            "TimelineOffsetSeconds": 5,
-            "ResponseProfiles": [],
-            "ContainerProfiles": [],
-            "CodecProfiles": [],
-            "SubtitleProfiles": [
-                {
-                    "Format": "srt",
-                    "Method": "External"
-                },
-                {
-                    "Format": "sub",
-                    "Method": "External"
-                },
-                {
-                    "Format": "ssa",
-                    "Method": "External"
-                },
-                {
-                    "Format": "ttml",
-                    "Method": "External"
-                },
-                {
-                    "Format": "vtt",
-                    "Method": "External"
-                }
-            ]
-        }
-    
-        #item_id='24b6d39b4779259fda28d856e9479b66' # psg quick
-        item_id='ce096db83d3454055cf0b5315284c947' # pgs slow: a lot
-        #item_id='32b81e45fa24eef35b6305bbd5c2329a'
-        #item_id='c792916f205221d1d84c73baad5e9814'
-        data = client.jellyfin.get_play_info(
-            item_id=item_id,
-            profile=profile
-        )
-        name = data['MediaSources'][0]['Path'].split('/')[-1]
+        try:
+            data = client.jellyfin.get_play_info(
+                item_id=item_id,
+                profile=Subtitle.profile
+            )
+        except jellyfin_apiclient_python_HTTPException:
+            return "Item not existing on Jellyfin", 404
 
         subtitles = []
 
+        name = data['MediaSources'][0]['Path'].split('/')[-1]
         subtitles_file_supported = ['subrip', 'ass', 'PGSSUB', 'mov_text']
         neos_converted_subtitles_file_supported = ['ass', 'mov_text']
         neos_extracted_subtitles_file_supported = ['PGSSUB']
@@ -75,15 +77,11 @@ class Subtitle:
                 if format_supported:
                     subtitles.append(media['DisplayTitle'])
                 else:
-                    print(f'Warning format {codec} not suported for item id {item_id}')
+                    logging.warning(f'format {codec} not suported for item id {item_id}')
                     if media['IsExternal'] or media['IsTextSubtitleStream'] or media['SupportsExternalStream']:
-                        print('This format seems to be easly convertable in srt')
-                    url = f"{app.config['SERVER_URL']}{media['DeliveryUrl']}"
-                    print(url)
+                        logging.info('This format seems to be easly convertable in srt')
             
-        for subtitle in subtitles:
-            print(subtitle)
-        return subtitles
+        return "`".join(subtitles)
 
     def download(item_id, name):
         data = client.jellyfin.download_url(item_id)
@@ -159,44 +157,13 @@ class Subtitle:
 
     @staticmethod
     def subtitle(item_id, subtitle_name):
-        profile = {
-            "Name": "Kodi",
-            "MusicStreamingTranscodingBitrate": 1280000,
-            "TimelineOffsetSeconds": 5,
-            "ResponseProfiles": [],
-            "ContainerProfiles": [],
-            "CodecProfiles": [],
-            "SubtitleProfiles": [
-                {
-                    "Format": "srt",
-                    "Method": "External"
-                },
-                {
-                    "Format": "sub",
-                    "Method": "External"
-                },
-                {
-                    "Format": "ssa",
-                    "Method": "External"
-                },
-                {
-                    "Format": "ttml",
-                    "Method": "External"
-                },
-                {
-                    "Format": "vtt",
-                    "Method": "External"
-                }
-            ]
-        }
-    
         item_id='24b6d39b4779259fda28d856e9479b66' # psg quick
         #item_id='ce096db83d3454055cf0b5315284c947' # pgs slow: a lot
         #item_id='32b81e45fa24eef35b6305bbd5c2329a'
         #item_id='c792916f205221d1d84c73baad5e9814'
         data = client.jellyfin.get_play_info(
             item_id=item_id,
-            profile=profile
+            profile=self.profile
         )
         name = data['MediaSources'][0]['Path'].split('/')[-1]
 

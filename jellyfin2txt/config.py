@@ -3,6 +3,7 @@ import uuid
 import os
 from flask import Flask
 from jellyfin_apiclient_python.client import JellyfinClient
+import logging
 
 class Settings:
   transcode_h265 = False
@@ -49,3 +50,4 @@ if "AccessToken" in result:
     state = client.authenticate({"Servers": [server]}, discover=False)
 client.start()
 
+logging.basicConfig(encoding='utf-8', level=logging.INFO)

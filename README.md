@@ -65,6 +65,7 @@ format: `start_index,total_record_count`.
 * `/series/<serie_id>` Return the list of seasons of the serie where an item is in the format `name,img_url,season_id`
 * `/series/<serie_id>/<sesaon_id>` Return the list of episode of the season of the serie where an item is in the format
   `name,img_url,dl_url,stream_url`
+* `/subtitles/<media_id>` Return the list of subtitles available for a media where media can either be a movie or an episode.
 
 For authentification the API search in the POST data as a json with the key `auth_key`. The value is
 directly the key.
