@@ -1,4 +1,5 @@
 import os
+import urllib
 from pathlib import Path
 from cleanit import Config as cleanitConfig
 from cleanit import Subtitle as cleanitSubtitle
@@ -57,7 +58,7 @@ class Subtitle:
         subtitles = []
 
         name = data['MediaSources'][0]['Path'].split('/')[-1]
-        subtitles_file_supported = ['subrip', 'ass', 'PGSSUB', 'mov_text']
+        neos_subtitles_file_supported = ['subrip']
         neos_converted_subtitles_file_supported = ['ass', 'mov_text']
         neos_extracted_subtitles_file_supported = ['PGSSUB']
     
@@ -65,14 +66,14 @@ class Subtitle:
             if media['Type'] == 'Subtitle':
                 format_supported = False
                 codec = media["Codec"]
-                if codec in subtitles_file_supported:
+                format_supported = False
+                if (
+                    (media['IsExternal'] or media['IsTextSubtitleStream'] or media['SupportsExternalStream'])
+                    or codec in neos_subtitles_file_supported
+                    or codec in neos_converted_subtitles_file_supported
+                    or codec in neos_extracted_subtitles_file_supported
+                ):
                     format_supported = True
-                    if media['IsExternal'] or media['IsTextSubtitleStream'] or media['SupportsExternalStream']:
-                        url = f"{app.config['SERVER_URL']}{media['DeliveryUrl']}"
-                        if codec not in neos_converted_subtitles_file_supported:
-                            format_supported = False
-                    elif  media['Codec'] not in neos_extracted_subtitles_file_supported:
-                        format_supported = False           
                     
                 if format_supported:
                     subtitles.append(media['DisplayTitle'])
@@ -152,7 +153,7 @@ class Subtitle:
         cfg = cleanitConfig()
         rules = cfg.select_rules(tags={'no-style', 'ocr', 'tidy', 'no-spam'})
         if sub.clean(rules):
-            sub.save(f"{subtitles_output_folder/final_filename}")
+            sub.save(f"{Subtitle.subtitles_output_folder/final_filename}")
 
 
     @staticmethod
@@ -167,20 +168,37 @@ class Subtitle:
 
         name = data['MediaSources'][0]['Path'].split('/')[-1]
 
-        subtitles_file_supported = ['subrip', 'ass', 'PGSSUB', 'mov_text']
         neos_subtitles_file_supported = ['subrip']
+        neos_converted_subtitles_file_supported = ['ass', 'mov_text']
+        neos_extracted_subtitles_file_supported = ['PGSSUB']
     
         for media in data['MediaSources'][0]['MediaStreams']:
             format_supported = False
             if media['Type'] == 'Subtitle':
                 if media['DisplayTitle'] != subtitle_name:
                     continue
-                if media['Codec'] not in subtitles_file_supported:
-                    continue
                 codec = media["Codec"]
                 final_filename = Path(f"{name.replace('/', '')}.{media['DisplayTitle'].replace('/', '')}.srt")
+                url = ''
                 if media['IsExternal'] or media['IsTextSubtitleStream'] or media['SupportsExternalStream']:
-                    url = f"{app.config['SERVER_URL']}{media['DeliveryUrl']}"
+                    if 'DeliveryUrl' in media:
+                        url = f"{app.config['SERVER_URL']}{media['DeliveryUrl']}"
+                    else:
+                        url = f"{app.config['SERVER_URL']}/Videos/{item_id}/{item_id}/Subtitles/{media['Index']}/0/Stream.{codec}"
+                    if codec in neos_converted_subtitles_file_supported:
+                        if codec == 'ass':
+                            with tempfile.NamedTemporaryFile() as sub_temp_file:
+                                urllib.request.urlretrieve(url, sub_temp_file.name)
+                                sub = pyasstosrtSubtitle(sub_temp_file.name)
+                                tmp_filename = sub_temp_file.name.split('/')[-1]
+                                sub.export(output_dir=Subtitle.subtitles_output_folder)
+                                os.replace(f"{Subtitle.subtitles_output_folder/tmp_filename}.srt", f"{Subtitle.subtitles_output_folder/final_filename}")
+                        elif codec == 'mov_text':
+                            with tempfile.NamedTemporaryFile() as sub_temp_file:
+                                urllib.request.urlretrieve(url, sub_temp_file.name)
+                                Subtitle.clean_sub(sub_temp_file.name, final_filename)
+                        else:
+                            format_supported = False
                     format_supported = True
                 else:
                     format_supported = False           
@@ -260,8 +278,8 @@ class Subtitle:
                                     urllib.request.urlretrieve(url, sub_temp_file.name)
                                     sub = pyasstosrtSubtitle(sub_temp_file.name)
                                     tmp_filename = sub_temp_file.name.split('/')[-1]
-                                    sub.export(output_dir=subtitles_output_folder)
-                                    os.replace(f"{subtitles_output_folder/tmp_filename}.srt", f"{subtitles_output_folder/final_filename}")
+                                    sub.export(output_dir=Subtitle.subtitles_output_folder)
+                                    os.replace(f"{Subtitle.subtitles_output_folder/tmp_filename}.srt", f"{Subtitle.subtitles_output_folder/final_filename}")
                             elif codec == 'mov_text':
                                 with tempfile.NamedTemporaryFile() as sub_temp_file:
                                     urllib.request.urlretrieve(url, sub_temp_file.name)
@@ -294,7 +312,7 @@ class Subtitle:
                                 if entry.is_file() and entry.suffix == '.srt':
                                     print(entry.stem.replace('/', ''))
                                     final_filename = Path(f"{entry.stem.replace('/', '')}.srt")
-                                    clean_sub(sub_temp_file, f"{subtitles_output_folder/final_filename}")
+                                    clean_sub(sub_temp_file, f"{Subtitle.subtitles_output_folder/final_filename}")
                                     url = 'uwu'
                         # for extract pgsrip use https://github.com/ratoaq2/pgsrip
                     else:
