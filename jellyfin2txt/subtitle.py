@@ -44,6 +44,9 @@ class Subtitle:
             }
         ]
     }
+    neos_subtitles_file_supported = ['subrip']
+    neos_converted_subtitles_file_supported = ['ass', 'mov_text']
+    neos_extracted_subtitles_file_supported = ['PGSSUB']
 
     @staticmethod
     def subtitles(item_id):
@@ -58,9 +61,6 @@ class Subtitle:
         subtitles = []
 
         name = data['MediaSources'][0]['Path'].split('/')[-1]
-        neos_subtitles_file_supported = ['subrip']
-        neos_converted_subtitles_file_supported = ['ass', 'mov_text']
-        neos_extracted_subtitles_file_supported = ['PGSSUB']
     
         for media in data['MediaSources'][0]['MediaStreams']:
             if media['Type'] == 'Subtitle':
@@ -69,9 +69,9 @@ class Subtitle:
                 format_supported = False
                 if (
                     (media['IsExternal'] or media['IsTextSubtitleStream'] or media['SupportsExternalStream'])
-                    or codec in neos_subtitles_file_supported
-                    or codec in neos_converted_subtitles_file_supported
-                    or codec in neos_extracted_subtitles_file_supported
+                    or codec in Subtitle.neos_subtitles_file_supported
+                    or codec in Subtitle.neos_converted_subtitles_file_supported
+                    or codec in Subtitle.neos_extracted_subtitles_file_supported
                 ):
                     format_supported = True
                     
@@ -167,10 +167,6 @@ class Subtitle:
             return "Item not existing on Jellyfin", 404
 
         name = data['MediaSources'][0]['Path'].split('/')[-1]
-
-        neos_subtitles_file_supported = ['subrip']
-        neos_converted_subtitles_file_supported = ['ass', 'mov_text']
-        neos_extracted_subtitles_file_supported = ['PGSSUB']
     
         for media in data['MediaSources'][0]['MediaStreams']:
             format_supported = False
@@ -185,7 +181,7 @@ class Subtitle:
                         url = f"{app.config['SERVER_URL']}{media['DeliveryUrl']}"
                     else:
                         url = f"{app.config['SERVER_URL']}/Videos/{item_id}/{item_id}/Subtitles/{media['Index']}/0/Stream.{codec}"
-                    if codec in neos_converted_subtitles_file_supported:
+                    if codec in Subtitle.neos_converted_subtitles_file_supported:
                         if codec == 'ass':
                             with tempfile.NamedTemporaryFile() as sub_temp_file:
                                 urllib.request.urlretrieve(url, sub_temp_file.name)
@@ -259,7 +255,6 @@ class Subtitle:
         subtitles = []
 
         subtitles_file_supported = ['subrip', 'ass', 'PGSSUB', 'mov_text']
-        neos_subtitles_file_supported = ['subrip']
     
         for media in data['MediaSources'][0]['MediaStreams']:
             if media['Type'] == 'Subtitle':
@@ -272,7 +267,7 @@ class Subtitle:
                         index = media["Index"]
                         #url = f"{app.config['SERVER_URL']}/Videos/{item_id}/{item_id}/Subtitles/{index}/0/Stream.{codec}"
                         url = f"{app.config['SERVER_URL']}{media['DeliveryUrl']}"
-                        if codec not in neos_subtitles_file_supported:
+                        if codec not in Subtitle.neos_subtitles_file_supported:
                             if codec == 'ass':
                                 with tempfile.NamedTemporaryFile() as sub_temp_file:
                                     urllib.request.urlretrieve(url, sub_temp_file.name)
