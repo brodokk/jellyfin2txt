@@ -89,7 +89,18 @@ infomation in a slot called `DynVar` just under the root of the of the Jellyfin 
 - `Client/AuthKey` is the auth key generated from the `key.py` utility needed
   to access to the server.
 
-#### Know issues
+### Subtitles
+
+#### Extracting hardcoded subtitles
+
+###### PGSUB
+
+Subtitles in this format are using the external module https://github.com/ratoaq2/pgsrip.
+If you want to be able to extract file in this format you free RAM **must** be big enough
+for have the movie fit inside. Example if you movie is 2GB you need more than 2GB of RAM
+available.
+
+### Know issues
 
 - The stream url didnt work yet probably because of this issue: https://github.com/Neos-Metaverse/NeosPublic/issues/2812
 - The download url didnt work because Neos dont reconize the file extension
