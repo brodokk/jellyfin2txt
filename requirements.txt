@@ -6,3 +6,4 @@ cleanit
 pyasstosrt
 sh
 psutil
+pgsrip

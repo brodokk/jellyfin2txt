@@ -9,6 +9,8 @@ from cleanit import Subtitle as cleanitSubtitle
 from pyasstosrt import Subtitle as pyasstosrtSubtitle
 import tempfile
 from jellyfin2txt.utils import sizeof_fmt
+from pgsrip import pgsrip, Mkv, Options
+from babelfish import Language
 
 import logging
 
@@ -149,41 +151,35 @@ class Subtitle:
                         elif codec == 'mov_text':
                             with tempfile.NamedTemporaryFile() as sub_temp_file:
                                 urllib.request.urlretrieve(url, sub_temp_file.name)
-                                Subtitle.clean_sub(sub_temp_file.name, final_filename)
+                                Subtitle.Media.clean_sub(sub_temp_file.name, final_filename)
                         else:
                             format_supported = False
                     format_supported = True
                 elif  media['Codec'] in Subtitle.neos_extracted_subtitles_file_supported:
                     dl_path = "/home/neodarz/Code/brodokk/jellyfin2txt/tmp/"
+                    dl_path = "/home/brodokk/Code/jellyfin2txt/tmp/"
                     with tempfile.TemporaryDirectory(dir='tmp') as sub_temp_dir:
+                        try:
+                            from sh import mkvmerge
+                        except ImportError:
+                            logging.error("Cannot extract subtitles if mkvmerge is not available.")
+                            return "Error while extracting subtitles from media", 500 
                         sub_temp_file, sub_temp_file_size = Subtitle.download(item_id, Path(dl_path) / Path(name))
                         free_mem = psutil.virtual_memory().available
                         if sub_temp_file_size >= free_mem + 100000:
                             logging.error(f'Only {sizeof_fmt(free_mem)} RAM free while the file is {sizeof_fmt(sub_temp_file_size)}')
-                            return "Error while extracting subtitles from movie", 500
-                        from sh import pgsrip
-                        from pgsrip import pgsrip, Mkv, Options
-                        from babelfish import Language
+                            return "Error while extracting subtitles from media", 500
 
                         media_file = Mkv(sub_temp_file)
                         options = Options(languages={Language('eng')}, overwrite=True, one_per_lang=False)
+                        logging.info("Processing the media...")
                         pgsrip.rip(media_file, options)
-                        from sh import ls
 
-                        print(ls('-alh', sub_temp_dir))
-                        print(sub_temp_file)
-                        #print(sub_temp_file)
-                        #import time
-                        #time.sleep(10000)
-                        #pgsrip('-a', sub_temp_file)
-
-                        for entry in Path(sub_temp_dir).iterdir():
+                        for entry in Path(dl_path).iterdir():
                             if entry.is_file() and entry.suffix == '.srt':
-                                print(entry.stem.replace('/', ''))
                                 final_filename = Path(f"{entry.stem.replace('/', '')}.srt")
-                                clean_sub(sub_temp_file, f"{Subtitle.subtitles_output_folder/final_filename}")
+                                Media.clean_sub(sub_temp_file, f"{Subtitle.subtitles_output_folder/final_filename}")
                                 url = 'uwu'
-                    # for extract pgsrip use https://github.com/ratoaq2/pgsrip
                 else:
                     format_supported = False           
                 
@@ -266,7 +262,7 @@ class Subtitle:
                             elif codec == 'mov_text':
                                 with tempfile.NamedTemporaryFile() as sub_temp_file:
                                     urllib.request.urlretrieve(url, sub_temp_file.name)
-                                    clean_sub(sub_temp_file.name, final_filename)
+                                    Media.clean_sub(sub_temp_file.name, final_filename)
                             else:
                                 format_supported = False
                     elif  media['Codec'] == 'PGSSUB':
@@ -293,7 +289,7 @@ class Subtitle:
                                 if entry.is_file() and entry.suffix == '.srt':
                                     print(entry.stem.replace('/', ''))
                                     final_filename = Path(f"{entry.stem.replace('/', '')}.srt")
-                                    clean_sub(sub_temp_file, f"{Subtitle.subtitles_output_folder/final_filename}")
+                                    Media.clean_sub(sub_temp_file, f"{Subtitle.subtitles_output_folder/final_filename}")
                                     url = 'uwu'
                         # for extract pgsrip use https://github.com/ratoaq2/pgsrip
                     else:
