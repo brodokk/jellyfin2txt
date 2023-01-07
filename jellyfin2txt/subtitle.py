@@ -19,7 +19,8 @@ from  jellyfin_apiclient_python.exceptions import HTTPException as jellyfin_apic
 from jellyfin2txt.config import client, app
 
 class Subtitle:
-    subtitles_output_folder = Path("subtitles")
+    subtitles_output_folder = Path(app.config['SUBTITLES_OUTPUT'])
+    tmp_subtitles_output_folder = Path(app.config['SUBTITLES_TMP'])
     profile = {
         "Name": "Jellyfin2txt",
         "MusicStreamingTranscodingBitrate": 1280000,
@@ -103,16 +104,24 @@ class Subtitle:
                 for dat in iter(partial(response.read, 32768), b''):
                     dest_file.write(dat)
                     size += len(dat)
-                    print(f"{sizeof_fmt(size)} / {hz_tt_size}")
+                    logging.info(f"{sizeof_fmt(size)} / {hz_tt_size}")
         return name, tt_size
 
     @staticmethod
     def clean_sub(sub_file, final_filename):
+        logging.info('Starting cleaning sub...')
         sub = cleanitSubtitle(sub_file)
         cfg = cleanitConfig()
         rules = cfg.select_rules(tags={'no-style', 'ocr', 'tidy', 'no-spam'})
-        if sub.clean(rules):
-            sub.save(f"{Subtitle.subtitles_output_folder/final_filename}")
+        from cleanit.cli import clean_subtitle
+        clean_subtitle(
+            sub = sub,
+            rules = rules,
+            encoding = 'utf-8',
+            force = False,
+            test = False,
+            verbose = 99
+        )
 
 
     @staticmethod
@@ -125,7 +134,14 @@ class Subtitle:
         except jellyfin_apiclient_python_HTTPException:
             return "Item not existing on Jellyfin", 404
 
-        name = data['MediaSources'][0]['Path'].split('/')[-1]
+        name = Path(data['MediaSources'][0]['Path'].split('/')[-1])
+
+        subtitle_name_name = False
+        for media in data['MediaSources'][0]['MediaStreams']:
+            if media['DisplayTitle'] == subtitle_name:
+                    subtitle_name_name = True
+        if not subtitle_name_name:
+            return f"Subtitle {subtitle_name} not found for this media", 404
     
         for media in data['MediaSources'][0]['MediaStreams']:
             format_supported = False
@@ -133,61 +149,64 @@ class Subtitle:
                 if media['DisplayTitle'] != subtitle_name:
                     continue
                 codec = media["Codec"]
-                final_filename = Path(f"{name.replace('/', '')}.{media['DisplayTitle'].replace('/', '')}.srt")
+
+                final_filename = Path(f"{name.stem} - {media['DisplayTitle']}.srt")
                 url = ''
                 if media['IsExternal'] or media['IsTextSubtitleStream'] or media['SupportsExternalStream']:
                     if 'DeliveryUrl' in media:
                         url = f"{app.config['SERVER_URL']}{media['DeliveryUrl']}"
                     else:
                         url = f"{app.config['SERVER_URL']}/Videos/{item_id}/{item_id}/Subtitles/{media['Index']}/0/Stream.{codec}"
+                    tmp_filename = Subtitle.tmp_subtitles_output_folder / final_filename 
+                    if codec in Subtitle.neos_subtitles_file_supported:
+                        urllib.request.urlretrieve(url, tmp_filename)
+                        os.replace(tmp_filename, f"{Subtitle.subtitles_output_folder/final_filename}")
                     if codec in Subtitle.neos_converted_subtitles_file_supported:
                         if codec == 'ass':
-                            with tempfile.NamedTemporaryFile() as sub_temp_file:
-                                urllib.request.urlretrieve(url, sub_temp_file.name)
-                                sub = pyasstosrtSubtitle(sub_temp_file.name)
-                                tmp_filename = sub_temp_file.name.split('/')[-1]
-                                sub.export(output_dir=Subtitle.subtitles_output_folder)
-                                os.replace(f"{Subtitle.subtitles_output_folder/tmp_filename}.srt", f"{Subtitle.subtitles_output_folder/final_filename}")
+                            urllib.request.urlretrieve(url, tmp_filename)
+                            sub = pyasstosrtSubtitle(tmp_filename)
+                            sub.export(output_dir=Subtitle.tmp_subtitles_output_folder)
+                            os.replace(tmp_filename, f"{Subtitle.subtitles_output_folder/final_filename}")
                         elif codec == 'mov_text':
-                            with tempfile.NamedTemporaryFile() as sub_temp_file:
-                                urllib.request.urlretrieve(url, sub_temp_file.name)
-                                Subtitle.Media.clean_sub(sub_temp_file.name, final_filename)
+                            urllib.request.urlretrieve(url, tmp_filename)
+                            Subtitle.clean_sub(tmp_filename, final_filename)
+                            os.replace(tmp_filename, f"{Subtitle.subtitles_output_folder/final_filename}")
                         else:
                             format_supported = False
                     format_supported = True
                 elif  media['Codec'] in Subtitle.neos_extracted_subtitles_file_supported:
-                    dl_path = "/home/neodarz/Code/brodokk/jellyfin2txt/tmp/"
-                    dl_path = "/home/brodokk/Code/jellyfin2txt/tmp/"
-                    with tempfile.TemporaryDirectory(dir='tmp') as sub_temp_dir:
-                        try:
-                            from sh import mkvmerge
-                        except ImportError:
-                            logging.error("Cannot extract subtitles if mkvmerge is not available.")
-                            return "Error while extracting subtitles from media", 500 
-                        sub_temp_file, sub_temp_file_size = Subtitle.download(item_id, Path(dl_path) / Path(name))
-                        free_mem = psutil.virtual_memory().available
-                        if sub_temp_file_size >= free_mem + 100000:
-                            logging.error(f'Only {sizeof_fmt(free_mem)} RAM free while the file is {sizeof_fmt(sub_temp_file_size)}')
-                            return "Error while extracting subtitles from media", 500
+                    try:
+                        from sh import mkvmerge
+                    except ImportError:
+                        logging.error("Cannot extract subtitles if mkvmerge is not available.")
+                        return "Error while extracting subtitles from media", 500 
+                    sub_temp_file, sub_temp_file_size = Subtitle.download(item_id, Path(Subtitle.tmp_subtitles_output_folder) / Path(name))
+                    free_mem = psutil.virtual_memory().available
+                    if sub_temp_file_size >= free_mem + 100000:
+                        logging.error(f'Only {sizeof_fmt(free_mem)} RAM free while the file is {sizeof_fmt(sub_temp_file_size)}')
+                        return "Error while extracting subtitles from media", 500
 
-                        media_file = Mkv(sub_temp_file)
-                        options = Options(languages={Language('eng')}, overwrite=True, one_per_lang=False)
-                        logging.info("Processing the media...")
-                        pgsrip.rip(media_file, options)
+                    media = Mkv(sub_temp_file)
+                    options = Options(languages={Language('eng')}, overwrite=True, one_per_lang=False)
+                    logging.info("Processing the media...")
+                    pgsrip.rip(media, options)
 
-                        for entry in Path(dl_path).iterdir():
-                            if entry.is_file() and entry.suffix == '.srt':
-                                final_filename = Path(f"{entry.stem.replace('/', '')}.srt")
-                                Media.clean_sub(sub_temp_file, f"{Subtitle.subtitles_output_folder/final_filename}")
-                                url = 'uwu'
+                    for entry in Path(Subtitle.tmp_subtitles_output_folder).iterdir():
+                        if entry.is_file() and entry.suffix == '.srt':
+                            Subtitle.clean_sub(entry, final_filename)
+                            os.replace(entry, f"{Subtitle.subtitles_output_folder/final_filename}")
+                            url = 'uwu'
+                    format_supported = True
                 else:
                     format_supported = False           
                 
                 if format_supported:
                     return url
                 else:
-                    print(f"Warning format {media['DisplayTitle']} {codec} not suported for item id {item_id}")
+                    logging.warning(f"Format {media['DisplayTitle']} {codec} not suported for item id {item_id}")
                     if media['IsExternal'] or media['IsTextSubtitleStream'] or media['SupportsExternalStream']:
-                        print('This format seems to be easly convertable in srt')
+                        logging.info('This format seems to be easly convertable in srt')
+        if not data['MediaSources'][0]['MediaStreams']:
+            logging.warning('No subtitle found')
     
         return "Error while returning the srt", 500

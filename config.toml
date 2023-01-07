@@ -12,3 +12,6 @@ SERIES_ID = ""
 
 MOVIES = ""
 SERIES = ""
+
+SUBTITLES_OUTPUT = ''
+SUBTITLES_TMP = '/tmp/jellyfin2txt'
