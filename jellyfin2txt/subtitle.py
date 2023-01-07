@@ -1,10 +1,14 @@
 import os
 import urllib
+import psutil
+from urllib.request import urlopen
+from functools import partial
 from pathlib import Path
 from cleanit import Config as cleanitConfig
 from cleanit import Subtitle as cleanitSubtitle
 from pyasstosrt import Subtitle as pyasstosrtSubtitle
 import tempfile
+from jellyfin2txt.utils import sizeof_fmt
 
 import logging
 
@@ -86,66 +90,19 @@ class Subtitle:
 
     def download(item_id, name):
         data = client.jellyfin.download_url(item_id)
-
-        from time import sleep
-        from urllib.request import urlopen
-
-        from rich.progress import wrap_file
-
-        from functools import partial
-
         response = urlopen(data)
-        size = int(response.headers["Content-Length"])
-
-    
-        from rich.progress import (
-            BarColumn,
-            DownloadColumn,
-            Progress,
-            TaskID,
-            TextColumn,
-            TimeRemainingColumn,
-            TransferSpeedColumn,
-        )
-
-        from threading import Event
-
-        import signal
-
-        progress = Progress(
-            TextColumn("[bold blue]{task.fields[filename]}", justify="right"),
-            BarColumn(bar_width=None),
-            "[progress.percentage]{task.percentage:>3.1f}%",
-            "•",
-            DownloadColumn(),
-            "•",
-            TransferSpeedColumn(),
-            "•",
-            TimeRemainingColumn(),
-        )
-
-        done_event = Event()
-
-
-        def handle_sigint(signum, frame):
-            done_event.set()
-
-
-        #signal.signal(signal.SIGINT, handle_sigint)
-
-        with progress:
-            task_id = progress.add_task('download', filename=name, total=size, start=False)
+        tt_size = int(response.headers["Content-Length"])
+        if name.is_file() and name.stat().st_size == tt_size:
+            logging.warning('File already exist and seems to be the same, ignoring dl...')
+        else:
+            hz_tt_size = sizeof_fmt(tt_size)
+            size = 0
             with open(name, 'wb') as dest_file:
-                progress.start_task(task_id)
                 for dat in iter(partial(response.read, 32768), b''):
                     dest_file.write(dat)
-                    progress.update(task_id, advance=len(dat))
-                    if done_event.is_set():
-                        exit(1)
-
-        #with urllib.request.urlopen(data) as f:
-        #    html = f.read().decode('utf-8')
-        return name
+                    size += len(dat)
+                    print(f"{sizeof_fmt(size)} / {hz_tt_size}")
+        return name, tt_size
 
     @staticmethod
     def clean_sub(sub_file, final_filename):
@@ -196,6 +153,37 @@ class Subtitle:
                         else:
                             format_supported = False
                     format_supported = True
+                elif  media['Codec'] in Subtitle.neos_extracted_subtitles_file_supported:
+                    dl_path = "/home/neodarz/Code/brodokk/jellyfin2txt/tmp/"
+                    with tempfile.TemporaryDirectory(dir='tmp') as sub_temp_dir:
+                        sub_temp_file, sub_temp_file_size = Subtitle.download(item_id, Path(dl_path) / Path(name))
+                        free_mem = psutil.virtual_memory().available
+                        if sub_temp_file_size >= free_mem + 100000:
+                            logging.error(f'Only {sizeof_fmt(free_mem)} RAM free while the file is {sizeof_fmt(sub_temp_file_size)}')
+                            return "Error while extracting subtitles from movie", 500
+                        from sh import pgsrip
+                        from pgsrip import pgsrip, Mkv, Options
+                        from babelfish import Language
+
+                        media_file = Mkv(sub_temp_file)
+                        options = Options(languages={Language('eng')}, overwrite=True, one_per_lang=False)
+                        pgsrip.rip(media_file, options)
+                        from sh import ls
+
+                        print(ls('-alh', sub_temp_dir))
+                        print(sub_temp_file)
+                        #print(sub_temp_file)
+                        #import time
+                        #time.sleep(10000)
+                        #pgsrip('-a', sub_temp_file)
+
+                        for entry in Path(sub_temp_dir).iterdir():
+                            if entry.is_file() and entry.suffix == '.srt':
+                                print(entry.stem.replace('/', ''))
+                                final_filename = Path(f"{entry.stem.replace('/', '')}.srt")
+                                clean_sub(sub_temp_file, f"{Subtitle.subtitles_output_folder/final_filename}")
+                                url = 'uwu'
+                    # for extract pgsrip use https://github.com/ratoaq2/pgsrip
                 else:
                     format_supported = False           
                 
@@ -284,8 +272,6 @@ class Subtitle:
                     elif  media['Codec'] == 'PGSSUB':
                         print('go pgsrip')
                         with tempfile.TemporaryDirectory(dir='tmp') as sub_temp_dir:
-                            #urllib.request.urlretrieve(url, sub_temp_dir)
-                            #clean_sub(sub_temp_file.name, final_filename)
                             sub_temp_file = download(item_id, Path(sub_temp_dir) / Path(name))
                             from sh import pgsrip
                             from pgsrip import pgsrip, Mkv, Options
