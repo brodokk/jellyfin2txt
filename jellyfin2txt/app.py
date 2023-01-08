@@ -93,6 +93,12 @@ def subtitle(item_id, subtitle_name):
         return Subtitle.subtitle(item_id, subtitle_name)
     return access_denied()
 
+@app.route('/subtitles/<item_id>/<subtitle_name>/extract', methods=['POST'])
+def subtitle_extract(item_id, subtitle_name):
+    if check_perms(request.data):
+        return Subtitle.subtitle_extract(item_id, subtitle_name)
+    return access_denied()
+
 USER_APP_NAME = "Jellyfin2txt"
 
 @app.route('/movies_id', methods=['POST'])
