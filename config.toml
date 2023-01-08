@@ -15,3 +15,7 @@ SERIES = ""
 
 SUBTITLES_OUTPUT = ''
 SUBTITLES_TMP = '/tmp/jellyfin2txt'
+
+# The proxy url to deserve the subtiles, full http url usable where the subtitles are in one big folder.
+# End slash not needed
+PROXY_URL = "http://myhost.example.com/subtitles"

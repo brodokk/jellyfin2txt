@@ -66,6 +66,8 @@ format: `start_index,total_record_count`.
 * `/series/<serie_id>/<sesaon_id>` Return the list of episode of the season of the serie where an item is in the format
   `name,img_url,dl_url,stream_url`
 * `/subtitles/<media_id>` Return the list of subtitles available for a media where media can either be a movie or an episode.
+* `/subtitles/<media_id>/<subtitle_name>` Return the subtitle url available on the proxy.
+* `/subtitles/<media_id>/<subtitle_name>/extract` Extract the subtitle from the server. This process can be very long if the subtitle is burned in the media. See `Extracting hardcoded subtitles`.
 
 For authentification the API search in the POST data as a json with the key `auth_key`. The value is
 directly the key.
@@ -91,7 +93,21 @@ infomation in a slot called `DynVar` just under the root of the of the Jellyfin 
 
 ### Subtitles
 
+This proxy is capabale to serve the following subtitles format:
+
+- `subrip` directly
+- `ass`, `move_text` extracted from jellyfin and converted in `srt`
+- `PGSSUB` extracted from the movie via OCR and converted in `srt`
+
 #### Extracting hardcoded subtitles
+
+You need to have installed on your system the binary `mkvmerge` available in `MKVToolNix`.
+You also need to have `tesseract-ocr` and the tessdata `best`. (For pgsrip)
+
+```
+$ git clone https://github.com/tesseract-ocr/tessdata_best.git
+export TESSDATA_PREFIX=~/tessdata_best
+```
 
 ###### PGSUB
 
@@ -111,7 +127,3 @@ better to use the Neos cloud as a storage for streame your file. There is an
 option in a context menu to copy the url. If you want to save the cassette you
 will need to remove the InventoryLink using the option on the context menu.
 Keep in mind the option to copy the link can break at any time.
-
-## TODO
-
-* Add support for subtitles
