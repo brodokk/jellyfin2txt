@@ -21,6 +21,7 @@ from jellyfin2txt.config import client, app
 class Subtitle:
     subtitles_output_folder = Path(app.config['SUBTITLES_OUTPUT'])
     tmp_subtitles_output_folder = Path(app.config['SUBTITLES_TMP'])
+    proxy_url = Path(app.config['PROXY_URL'])
     profile = {
         "Name": "Jellyfin2txt",
         "MusicStreamingTranscodingBitrate": 1280000,
@@ -123,9 +124,30 @@ class Subtitle:
             verbose = 99
         )
 
-
     @staticmethod
     def subtitle(item_id, subtitle_name):
+        try:
+            data = client.jellyfin.get_play_info(
+                item_id=item_id,
+                profile=Subtitle.profile
+            )
+        except jellyfin_apiclient_python_HTTPException:
+            return "Item not existing on Jellyfin", 404
+
+        name = Path(data['MediaSources'][0]['Path'].split('/')[-1])
+        subtitle_filename = f"{name.stem} - {subtitle_name}.srt"
+
+        subtitle_found = False
+        for entry in Path(Subtitle.subtitles_output_folder).iterdir():
+            if entry.is_file() and entry.suffix == '.srt' and entry.name == subtitle_filename:
+                subtitle_found = True
+
+        if subtitle_found:
+            return f"{Subtitle.proxy_url / subtitle_filename}"
+        return "Subtitle not found", 404
+
+    @staticmethod
+    def subtitle_extract(item_id, subtitle_name):
         try:
             data = client.jellyfin.get_play_info(
                 item_id=item_id,
@@ -151,7 +173,6 @@ class Subtitle:
                 codec = media["Codec"]
 
                 final_filename = Path(f"{name.stem} - {media['DisplayTitle']}.srt")
-                url = ''
                 if media['IsExternal'] or media['IsTextSubtitleStream'] or media['SupportsExternalStream']:
                     if 'DeliveryUrl' in media:
                         url = f"{app.config['SERVER_URL']}{media['DeliveryUrl']}"
@@ -195,13 +216,12 @@ class Subtitle:
                         if entry.is_file() and entry.suffix == '.srt':
                             Subtitle.clean_sub(entry, final_filename)
                             os.replace(entry, f"{Subtitle.subtitles_output_folder/final_filename}")
-                            url = 'uwu'
                     format_supported = True
                 else:
                     format_supported = False           
                 
                 if format_supported:
-                    return url
+                    return "Media extract correctly"
                 else:
                     logging.warning(f"Format {media['DisplayTitle']} {codec} not suported for item id {item_id}")
                     if media['IsExternal'] or media['IsTextSubtitleStream'] or media['SupportsExternalStream']:
