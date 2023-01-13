@@ -1,6 +1,7 @@
 import toml
 import uuid
 import os
+from pathlib import Path
 from flask import Flask
 from jellyfin_apiclient_python.client import JellyfinClient
 import logging
@@ -27,7 +28,18 @@ params = {
 client = JellyfinClient()
 app = Flask(__name__)
 
-app.config.from_file(os.getcwd() + '/config.toml', load=toml.load)
+config_file = os.getcwd() / Path('.config/jellyfin2txt/config.toml')
+config_file_dev = os.path.dirname(os.path.dirname(__file__)) / Path('config.toml')
+
+if not config_file.is_file():
+    if not config_file_dev.is_file():
+        logging.error('Config file not found in one of this location:')
+        logging.error(f' - {config_file}')
+        logging.error(f' - {config_file_dev}')
+        exit(1)
+    config_file = config_file_dev
+
+app.config.from_file(config_file, load=toml.load)
 
 client.config.data["app.default"] = True
 version = "0.1"
@@ -48,6 +60,14 @@ if "AccessToken" in result:
     server["uuid"] = str(uuid.uuid4())
     server["username"] = app.config['USERNAME']
     state = client.authenticate({"Servers": [server]}, discover=False)
-client.start()
+else:
+    logging.error("Can't login to server")
+    exit(1)
+
+try:
+    client.start()
+except ValueError as err:
+    logging.error(err)
+    exit(1)
 
 logging.basicConfig(encoding='utf-8', level=logging.INFO)

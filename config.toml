@@ -1,3 +1,4 @@
+SERVER_DOMAIN = ""
 SERVER_URL = ""
 USERNAME = ""
 PASSWORD = ""

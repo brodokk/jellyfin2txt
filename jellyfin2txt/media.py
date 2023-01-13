@@ -31,7 +31,7 @@ class Media:
 
     @staticmethod
     def _thumbnail(item_id, fillHeight=320, fillWidth=213, quality=96):
-        server_url = app.config['SERVER_URL']
+        server_url = app.config['SERVER_DOMAIN']
         return (
             f'{server_url}/Items/{item_id}/Images/Primary?fillHeight={fillHeight}'
             f'&fillWidth={fillWidth}&quality={quality}'
