@@ -1,9 +1,0 @@
-flask
-jellyfin-apiclient-python
-tabulate
-toml
-cleanit
-pyasstosrt
-sh
-psutil
-pgsrip
