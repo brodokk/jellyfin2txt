@@ -250,7 +250,8 @@ class Subtitle:
             except ImportError:
                 logging.error("Cannot extract subtitles if mkvmerge is not available.")
                 continue
-            sub_temp_file, sub_temp_file_size = Subtitle.download(item_id, Path(Subtitle.tmp_subtitles_output_folder) / Path(name))
+            media_dl_path = Path(Subtitle.tmp_subtitles_output_folder) / Path(name)
+            sub_temp_file, sub_temp_file_size = Subtitle.download(item_id, media_dl_path)
             free_mem = psutil.virtual_memory().available
             if sub_temp_file_size >= free_mem + 100000:
                 logging.error(f'Only {sizeof_fmt(free_mem)} RAM free while the file is {sizeof_fmt(sub_temp_file_size)}')
@@ -265,3 +266,6 @@ class Subtitle:
                 if entry.is_file() and entry.suffix == '.srt':
                     Subtitle.clean_sub(entry, final_filename)
                     os.replace(entry, f"{Subtitle.subtitles_output_folder/final_filename}")
+
+            logging.info("Cleaning downloaded file...")
+            os.remove(media_dl_path)
