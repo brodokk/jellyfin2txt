@@ -16,14 +16,23 @@ import logging
 
 from  jellyfin_apiclient_python.exceptions import HTTPException as jellyfin_apiclient_python_HTTPException
 
+#item_id='24b6d39b4779259fda28d856e9479b66' # psg quick
+#item_id='ce096db83d3454055cf0b5315284c947' # pgs slow: a lot
+#item_id='32b81e45fa24eef35b6305bbd5c2329a' # move_text
+#item_id='c792916f205221d1d84c73baad5e9814'
+#5be3fa7d8dc9524a52426b8e0ba73a49 subrip forced
+#98b7b058a754399f2513631a0c65bdce subrip external
+#f17589e06f4724ed4d416449efe51b8a ass
+
 from jellyfin2txt.config import client, app, extract_queue
 
 class ExtractObject:
 
-    def __init__(self, item_name, item_id, status):
+    def __init__(self, item_name, item_id, final_filename, status):
         self.id = item_id
         self.name = item_name
         self.status = status
+        self.final_filename = final_filename
 
 class Subtitle:
     subtitles_output_folder = Path(app.config['SUBTITLES_OUTPUT'])
@@ -204,11 +213,12 @@ class Subtitle:
                     format_supported = True
                 elif  media['Codec'] in Subtitle.neos_extracted_subtitles_file_supported:
                     srt_file = Subtitle.subtitles_output_folder / final_filename
+                    logging.info(srt_file)
                     if srt_file.is_file():
                         return "Subtitle already extracted"
                     if name in extract_queue:
                         return f"Subtile extraction {extract_queue.item(name).status}"
-                    extract_queue.put(ExtractObject(name, item_id, 'planned'))
+                    extract_queue.put(ExtractObject(name, item_id, final_filename, 'planned'))
                     return "Subtitle extraction started"
                 else:
                     format_supported = False           
@@ -234,6 +244,7 @@ class Subtitle:
             item = extract_queue.get()
             item_id = item.id
             name = item.name
+            final_filename = item.final_filename
             try:
                 from sh import mkvmerge
             except ImportError:
