@@ -28,7 +28,7 @@ params = {
 client = JellyfinClient()
 app = Flask(__name__)
 
-config_file = os.getcwd() / Path('.config/jellyfin2txt/config.toml')
+config_file = os.path.expanduser( '~' ) / Path('.config/jellyfin2txt/config.toml')
 config_file_dev = os.path.dirname(os.path.dirname(__file__)) / Path('config.toml')
 
 if not config_file.is_file():
