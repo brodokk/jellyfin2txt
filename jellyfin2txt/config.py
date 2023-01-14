@@ -5,6 +5,7 @@ from pathlib import Path
 from flask import Flask
 from jellyfin_apiclient_python.client import JellyfinClient
 import logging
+import queue
 
 class Settings:
   transcode_h265 = False
@@ -69,5 +70,15 @@ try:
 except ValueError as err:
     logging.error(err)
     exit(1)
+
+class ExtractQueue(queue.Queue):
+    def __contains__(self, item_name):
+        with self.mutex:
+            return any(x.item_name == item_name for x in self.queue)
+    def item(self, item_name):
+        with self.mutex:
+            return [x for x in self.queue if x.item_name == item_name][0]
+
+extract_queue = ExtractQueue()
 
 logging.basicConfig(encoding='utf-8', level=logging.INFO)

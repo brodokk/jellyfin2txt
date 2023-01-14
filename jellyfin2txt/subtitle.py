@@ -16,7 +16,14 @@ import logging
 
 from  jellyfin_apiclient_python.exceptions import HTTPException as jellyfin_apiclient_python_HTTPException
 
-from jellyfin2txt.config import client, app
+from jellyfin2txt.config import client, app, extract_queue
+
+class ExtractObject:
+
+    def __init__(self, item_name, item_id, status):
+        self.id = item_id
+        self.name = item_name
+        self.status = status
 
 class Subtitle:
     subtitles_output_folder = Path(app.config['SUBTITLES_OUTPUT'])
@@ -196,32 +203,18 @@ class Subtitle:
                             format_supported = False
                     format_supported = True
                 elif  media['Codec'] in Subtitle.neos_extracted_subtitles_file_supported:
-                    try:
-                        from sh import mkvmerge
-                    except ImportError:
-                        logging.error("Cannot extract subtitles if mkvmerge is not available.")
-                        return "Error while extracting subtitles from media", 500 
-                    sub_temp_file, sub_temp_file_size = Subtitle.download(item_id, Path(Subtitle.tmp_subtitles_output_folder) / Path(name))
-                    free_mem = psutil.virtual_memory().available
-                    if sub_temp_file_size >= free_mem + 100000:
-                        logging.error(f'Only {sizeof_fmt(free_mem)} RAM free while the file is {sizeof_fmt(sub_temp_file_size)}')
-                        return "Error while extracting subtitles from media", 500
-
-                    media = Mkv(sub_temp_file)
-                    options = Options(languages={Language('eng')}, overwrite=True, one_per_lang=False)
-                    logging.info("Processing the media...")
-                    pgsrip.rip(media, options)
-
-                    for entry in Path(Subtitle.tmp_subtitles_output_folder).iterdir():
-                        if entry.is_file() and entry.suffix == '.srt':
-                            Subtitle.clean_sub(entry, final_filename)
-                            os.replace(entry, f"{Subtitle.subtitles_output_folder/final_filename}")
-                    format_supported = True
+                    srt_file = Subtitle.subtitles_output_folder / final_filename
+                    if srt_file.is_file():
+                        return "Subtitle already extracted"
+                    if name in extract_queue:
+                        return f"Subtile extraction {extract_queue.item(name).status}"
+                    extract_queue.put(ExtractObject(name, item_id, 'planned'))
+                    return "Subtitle extraction started"
                 else:
                     format_supported = False           
                 
                 if format_supported:
-                    return "Media extract correctly"
+                    return "Subtitle extracted correctly"
                 else:
                     logging.warning(f"Format {media['DisplayTitle']} {codec} not suported for item id {item_id}")
                     if media['IsExternal'] or media['IsTextSubtitleStream'] or media['SupportsExternalStream']:
@@ -230,3 +223,34 @@ class Subtitle:
             logging.warning('No subtitle found')
     
         return "Error while returning the srt", 500
+
+    @staticmethod
+    def subtitle_extract_thread():
+        import time
+        while True:
+            if extract_queue.empty():
+                time.sleep(2)
+                continue
+            item = extract_queue.get()
+            item_id = item.id
+            name = item.name
+            try:
+                from sh import mkvmerge
+            except ImportError:
+                logging.error("Cannot extract subtitles if mkvmerge is not available.")
+                continue
+            sub_temp_file, sub_temp_file_size = Subtitle.download(item_id, Path(Subtitle.tmp_subtitles_output_folder) / Path(name))
+            free_mem = psutil.virtual_memory().available
+            if sub_temp_file_size >= free_mem + 100000:
+                logging.error(f'Only {sizeof_fmt(free_mem)} RAM free while the file is {sizeof_fmt(sub_temp_file_size)}')
+                continue
+
+            media = Mkv(sub_temp_file)
+            options = Options(languages={Language('eng')}, overwrite=True, one_per_lang=False)
+            logging.info("Processing the media...")
+            pgsrip.rip(media, options)
+
+            for entry in Path(Subtitle.tmp_subtitles_output_folder).iterdir():
+                if entry.is_file() and entry.suffix == '.srt':
+                    Subtitle.clean_sub(entry, final_filename)
+                    os.replace(entry, f"{Subtitle.subtitles_output_folder/final_filename}")

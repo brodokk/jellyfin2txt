@@ -181,8 +181,12 @@ def main():
     ):
         item_not_found('SERIES_ID', app.config.get('SERIES_ID'))
 
-    #get_subtitles('f17589e06f4724ed4d416449efe51b8a')
-    #exit()
+
+    import threading
+    task = threading.Thread(
+        target=Subtitle.subtitle_extract_thread
+    )
+    task.start()
 
     app.run(host='0.0.0.0', port=args.port)
 
