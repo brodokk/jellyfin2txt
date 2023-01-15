@@ -61,7 +61,7 @@ class ExtractObject:
         self.updated_at = int(time() * 1000)
 
     def __repr__(self):
-        return f"{self.srt_name};{self.status};{self.item_id};{self.item_name};{self.error_message};{self.created_at};{self.updated_at}"
+        return f"{self.srt_name},{self.status},{self.item_id},{self.item_name},{self.error_message},{self.created_at},{self.updated_at}"
 
 
 class Jellyfin2TextSerializer(json.JSONEncoder):

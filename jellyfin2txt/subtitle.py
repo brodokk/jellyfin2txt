@@ -291,4 +291,4 @@ class Subtitle:
 
     @staticmethod
     def extract_status():
-        return "\n".join([f"{k};{v}" for k,v in extract_tasks.items()])
+        return ";".join([f"{k},{v}" for k,v in extract_tasks.items()])
