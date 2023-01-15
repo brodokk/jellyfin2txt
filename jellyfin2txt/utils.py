@@ -54,7 +54,7 @@ class ExtractObject:
         self.item_name = item_name
         self.error_message = error_message
         self.created_at = int(time() * 1000)
-        self.updated_at = None
+        self.updated_at = ""
 
     def update(self, field, value):
         setattr(self, field, value)
