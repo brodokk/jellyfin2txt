@@ -46,9 +46,9 @@ optional arguments:
 The API have 4 endpoints:
 
 Each endpoint response is sended without a new line at the end. Each entry
-is separated by `;`. But beware the first entry is not a proper entry. Its
-the pagging system information who is not implemented yet in the folowing
-format: `start_index,total_record_count`.
+is separated by `;`. But beware the first entry is not a proper entry for the
+endpoints `movies` and `series`. Its the pagging system information in the
+folowing format: `start_index,total_record_count`.
 
 * `/movies/` Return the list of movies where an item is in the format `name,img_url,dl_url,stream_url,trailer_url,external_url`. This endpoint also support two url parameters:
 	* `StartIndex` that you can use for start from a special index. Default to 0.
@@ -68,6 +68,8 @@ format: `start_index,total_record_count`.
 * `/subtitles/<media_id>` Return the list of subtitles available for a media where media can either be a movie or an episode.
 * `/subtitles/<media_id>/<subtitle_name>` Return the subtitle url available on the proxy.
 * `/subtitles/<media_id>/<subtitle_name>/extract` Extract the subtitle from the server. This process can be very long if the subtitle is burned in the media. See `Extracting hardcoded subtitles`.
+* `/subtiles/<media_id>/<subtitle_name>/extract/status` Return the status of the extraction process in the format `srt_name,status,item_id,item_name,error_message,created_at,updated_at` where `created_at` and `updated_at` are in milliseconds.
+* `/extract_status` Return the list of all the status of the extraction processes in the format `srt_name,status,item_id,item_name,error_message,created_at,updated_at` where `created_at` and `updated_at` are in milliseconds. Each task is separated by the `\n`.
 
 For authentification the API search in the POST data as a json with the key `auth_key`. The value is
 directly the key.
