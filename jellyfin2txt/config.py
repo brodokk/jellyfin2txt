@@ -71,14 +71,19 @@ except ValueError as err:
     logging.error(err)
     exit(1)
 
-class ExtractQueue(queue.Queue):
-    def __contains__(self, item_name):
-        with self.mutex:
-            return any(x.item_name == item_name for x in self.queue)
-    def item(self, item_name):
-        with self.mutex:
-            return [x for x in self.queue if x.item_name == item_name][0]
+class ExtractTasks(dict):
+    def __contains__(self, srt_name):
+        for k,v in self.items():
+            if v.srt_name == srt_name:
+                return True
+        return False
+    def item(self, srt_name):
+        items = [x for x in self.values() if x.srt_name == srt_name]
+        if items:
+            return items[0]
+        return False
 
-extract_queue = ExtractQueue()
+extract_queue = queue.Queue()
+extract_tasks = ExtractTasks()
 
 logging.basicConfig(encoding='utf-8', level=logging.INFO)

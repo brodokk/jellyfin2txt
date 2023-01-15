@@ -1,6 +1,7 @@
 import os
 import urllib
 import psutil
+import uuid
 from urllib.request import urlopen
 from functools import partial
 from pathlib import Path
@@ -24,15 +25,19 @@ from  jellyfin_apiclient_python.exceptions import HTTPException as jellyfin_apic
 #98b7b058a754399f2513631a0c65bdce subrip external
 #f17589e06f4724ed4d416449efe51b8a ass
 
-from jellyfin2txt.config import client, app, extract_queue
+from jellyfin2txt.config import client, app, extract_queue, extract_tasks
 
 class ExtractObject:
 
-    def __init__(self, item_name, item_id, final_filename, status):
-        self.id = item_id
-        self.name = item_name
+    def __init__(self, srt_name, status, item_id, item_name, error_message = ""):
+        self.srt_name = srt_name
         self.status = status
-        self.final_filename = final_filename
+        self.item_id = item_id
+        self.item_name = item_name
+        self.error_message = error_message
+
+    def __repr__(self):
+        return f"{self.srt_name} | {self.status} | {self.error_message}"
 
 class Subtitle:
     subtitles_output_folder = Path(app.config['SUBTITLES_OUTPUT'])
@@ -216,9 +221,16 @@ class Subtitle:
                     logging.info(srt_file)
                     if srt_file.is_file():
                         return "Subtitle already extracted"
-                    if name in extract_queue:
-                        return f"Subtile extraction {extract_queue.item(name).status}"
-                    extract_queue.put(ExtractObject(name, item_id, final_filename, 'planned'))
+                    if final_filename in extract_tasks:
+                        return f"Subtile extraction {extract_tasks.item(final_filename).status}"
+                    task_uuid = uuid.uuid4()
+                    extract_tasks[task_uuid] = ExtractObject(
+                        srt_name = final_filename,
+                        status = 'planned',
+                        item_id = item_id,
+                        item_name = name
+                    )
+                    extract_queue.put(task_uuid)
                     return "Subtitle extraction started"
                 else:
                     format_supported = False           
@@ -241,20 +253,28 @@ class Subtitle:
             if extract_queue.empty():
                 time.sleep(2)
                 continue
-            item = extract_queue.get()
-            item_id = item.id
-            name = item.name
-            final_filename = item.final_filename
+            task_uuid = extract_queue.get()
+            item = extract_tasks[task_uuid]
+            item_id = item.item_id
+            name = item.item_name
+            final_filename = item.srt_name
+            extract_tasks[task_uuid].status = "in progress"
             try:
                 from sh import mkvmerge
             except ImportError:
-                logging.error("Cannot extract subtitles if mkvmerge is not available.")
+                msg = "Cannot extract subtitles if mkvmerge is not available."
+                extract_tasks[task_uuid].status = "error"
+                extract_tasks[task_uuid].error_message = msg
+                logging.error(msg)
                 continue
             media_dl_path = Path(Subtitle.tmp_subtitles_output_folder) / Path(name)
             sub_temp_file, sub_temp_file_size = Subtitle.download(item_id, media_dl_path)
             free_mem = psutil.virtual_memory().available
             if sub_temp_file_size >= free_mem + 100000:
-                logging.error(f'Only {sizeof_fmt(free_mem)} RAM free while the file is {sizeof_fmt(sub_temp_file_size)}')
+                msg = f'Only {sizeof_fmt(free_mem)} RAM free while the file is {sizeof_fmt(sub_temp_file_size)}'
+                extract_tasks[task_uuid].status = "error"
+                extract_tasks[task_uuid].error_message = msg
+                logging.error(msg)
                 continue
 
             media = Mkv(sub_temp_file)
