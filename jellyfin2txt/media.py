@@ -136,7 +136,7 @@ class Media:
             transcode_codecs = "h264,h265,hevc,mpeg4,mpeg2video"
 
         profile = {
-            "Name": USER_APP_NAME,
+            "Name": "Jellyfin2txt",
             "MaxStreamingBitrate": video_bitrate * 1000,
             "MaxStaticBitrate": video_bitrate * 1000,
             "MusicStreamingTranscodingBitrate": 1280000,

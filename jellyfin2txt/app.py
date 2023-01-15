@@ -99,37 +99,6 @@ def subtitle_extract(item_id, subtitle_name):
         return Subtitle.subtitle_extract(item_id, subtitle_name)
     return access_denied()
 
-USER_APP_NAME = "Jellyfin2txt"
-
-@app.route('/movies_id', methods=['POST'])
-def movies_id():
-    item_id = "4e25807f0e7f80b36466b7559fad73b5"
-    profile = "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQgMTAuMDsgV2luNjQ7IHg2NDsgcnY6OTUuMCkgR2Vja28vMjAxMDAxMDEgRmlyZWZveC85NS4wfDE2NDIwOTExODk4NzM1"
-    is_playback = True
-    sid = 3
-    aid = 1
-    args = {
-            'UserId': "9bc44fa4c1204b2b8a78e58145de169d",
-            'MaxStreamingBitrate': 4000000,
-            'AutoOpenLiveStream': is_playback,
-            'StartTimeTicks': 11603630000,
-            'DeviceId': "TW96aWxsYS81LjAgKFdpbmRvd3MgTlQgMTAuMDsgV2luNjQ7IHg2NDsgcnY6OTUuMCkgR2Vja28vMjAxMDAxMDEgRmlyZWZveC85NS4wfDE2NDIwOTExODk4NzM1",
-            'IsPlayback': is_playback
-    }
-    args['SubtitleStreamIndex'] = sid
-    args['AudioStreamIndex'] = aid
-    args['MediaSourceId'] = item_id
-
-    #new_sync_client = client.jellyfin.new_sync_play_v2('test')
-    #print(type(new_sync_client))
-    #print(dir(new_sync_client))
-    #print(new_sync_client)
-    sync_play = client.jellyfin.get_sync_play(item_id)
-    print(sync_play)
-    join = client.jellyfin.join_sync_play("43032e1fd8ec4e6f8accf5a1595b1ae0")
-    print(join)
-
-
 def main():
 
     parser = argparse.ArgumentParser()
