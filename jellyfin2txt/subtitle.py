@@ -183,6 +183,8 @@ class Subtitle:
                 codec = media["Codec"]
 
                 final_filename = Path(f"{name.stem} - {media['DisplayTitle']}.srt")
+                task_uuid = str(uuid.uuid4())
+                to_extract = False
                 if media['IsExternal'] or media['IsTextSubtitleStream'] or media['SupportsExternalStream']:
                     if 'DeliveryUrl' in media:
                         url = f"{app.config['SERVER_URL']}{media['DeliveryUrl']}"
@@ -207,25 +209,27 @@ class Subtitle:
                     format_supported = True
                 elif  media['Codec'] in Subtitle.neos_extracted_subtitles_file_supported:
                     srt_file = Subtitle.subtitles_output_folder / final_filename
-                    logging.info(srt_file)
                     if srt_file.is_file():
                         return "Subtitle already extracted"
                     if final_filename in extract_tasks:
                         return f"Subtile extraction {extract_tasks.item(final_filename).status}"
-                    task_uuid = str(uuid.uuid4())
+                    to_extract = True
+                    format_supported = True
+                else:
+                    format_supported = False
+
+                if format_supported:
                     extract_tasks[task_uuid] = ExtractObject(
                         srt_name = final_filename,
-                        status = 'planned',
+                        status = 'planned' if to_extract else 'done',
                         item_id = item_id,
                         item_name = name
                     )
-                    extract_queue.put(task_uuid)
-                    return "Subtitle extraction started"
-                else:
-                    format_supported = False           
-                
-                if format_supported:
-                    return "Subtitle extracted correctly"
+                    if not to_extract:
+                        return "Subtitle extracted correctly"
+                    else:
+                        extract_queue.put(task_uuid)
+                        return "Subtitle extraction started"
                 else:
                     logging.warning(f"Format {media['DisplayTitle']} {codec} not suported for item id {item_id}")
                     if media['IsExternal'] or media['IsTextSubtitleStream'] or media['SupportsExternalStream']:
