@@ -2,6 +2,7 @@ import os
 import json
 import uuid
 from pathlib import PosixPath
+from time import time
 
 from jellyfin2txt.key import Key, CollisionsList
 
@@ -52,9 +53,15 @@ class ExtractObject:
         self.item_id = item_id
         self.item_name = item_name
         self.error_message = error_message
+        self.created_at = int(time() * 1000)
+        self.updated_at = None
+
+    def update(self, field, value):
+        setattr(self, field, value)
+        self.updated_at = int(time() * 1000)
 
     def __repr__(self):
-        return f"{self.srt_name}`{self.status}`{self.item_id}`{self.item_name}`{self.error_message}"
+        return f"{self.srt_name};{self.status};{self.item_id};{self.item_name};{self.error_message};{self.created_at};{self.updated_at}"
 
 
 class Jellyfin2TextSerializer(json.JSONEncoder):

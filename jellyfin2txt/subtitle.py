@@ -247,13 +247,13 @@ class Subtitle:
             item_id = item.item_id
             name = item.item_name
             final_filename = item.srt_name
-            extract_tasks[task_uuid].status = "in progress"
+            extract_tasks[task_uuid].update("status", "in progress")
             try:
                 from sh import mkvmerge
             except ImportError:
                 msg = "Cannot extract subtitles if mkvmerge is not available."
-                extract_tasks[task_uuid].status = "error"
-                extract_tasks[task_uuid].error_message = msg
+                extract_tasks[task_uuid].update("status", "error")
+                extract_tasks[task_uuid].update("error_message", msg)
                 logging.error(msg)
                 continue
             media_dl_path = Path(Subtitle.tmp_subtitles_output_folder) / Path(name)
@@ -261,8 +261,8 @@ class Subtitle:
             free_mem = psutil.virtual_memory().available
             if sub_temp_file_size >= free_mem + 100000:
                 msg = f'Only {sizeof_fmt(free_mem)} RAM free while the file is {sizeof_fmt(sub_temp_file_size)}'
-                extract_tasks[task_uuid].status = "error"
-                extract_tasks[task_uuid].error_message = msg
+                extract_tasks[task_uuid].update("status", "error")
+                extract_tasks[task_uuid].update("error_message", msg)
                 logging.error(msg)
                 continue
 
@@ -278,6 +278,7 @@ class Subtitle:
 
             logging.info("Cleaning downloaded file...")
             os.remove(media_dl_path)
+            extract_tasks[task_uuid].update("status", "done")
 
     @staticmethod
     def subtitle_extract_status(item_id, subtitle_name):
@@ -286,4 +287,4 @@ class Subtitle:
 
     @staticmethod
     def extract_status():
-        return "\n".join([f"{k}`{v}" for k,v in extract_tasks.items()])
+        return "\n".join([f"{k};{v}" for k,v in extract_tasks.items()])
