@@ -26,18 +26,7 @@ from  jellyfin_apiclient_python.exceptions import HTTPException as jellyfin_apic
 #f17589e06f4724ed4d416449efe51b8a ass
 
 from jellyfin2txt.config import client, app, extract_queue, extract_tasks
-
-class ExtractObject:
-
-    def __init__(self, srt_name, status, item_id, item_name, error_message = ""):
-        self.srt_name = srt_name
-        self.status = status
-        self.item_id = item_id
-        self.item_name = item_name
-        self.error_message = error_message
-
-    def __repr__(self):
-        return f"{self.srt_name} | {self.status} | {self.error_message}"
+from jellyfin2txt.utils import ExtractObject
 
 class Subtitle:
     subtitles_output_folder = Path(app.config['SUBTITLES_OUTPUT'])
@@ -223,7 +212,7 @@ class Subtitle:
                         return "Subtitle already extracted"
                     if final_filename in extract_tasks:
                         return f"Subtile extraction {extract_tasks.item(final_filename).status}"
-                    task_uuid = uuid.uuid4()
+                    task_uuid = str(uuid.uuid4())
                     extract_tasks[task_uuid] = ExtractObject(
                         srt_name = final_filename,
                         status = 'planned',
@@ -289,3 +278,12 @@ class Subtitle:
 
             logging.info("Cleaning downloaded file...")
             os.remove(media_dl_path)
+
+    @staticmethod
+    def subtitle_extract_status(item_id, subtitle_name):
+        item = extract_tasks.item(item_id)
+        return str(item) if item else ""
+
+    @staticmethod
+    def extract_status():
+        return "\n".join([f"{k}`{v}" for k,v in extract_tasks.items()])

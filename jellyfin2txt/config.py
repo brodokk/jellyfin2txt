@@ -7,6 +7,8 @@ from jellyfin_apiclient_python.client import JellyfinClient
 import logging
 import queue
 
+from jellyfin2txt.utils import ExtractTasks, Jellyfin2TextSerializer
+
 class Settings:
   transcode_h265 = False
   remote_kbps: int = 10000
@@ -28,6 +30,7 @@ params = {
 
 client = JellyfinClient()
 app = Flask(__name__)
+app.json_encoder = Jellyfin2TextSerializer
 
 config_file = os.path.expanduser( '~' ) / Path('.config/jellyfin2txt/config.toml')
 config_file_dev = os.path.dirname(os.path.dirname(__file__)) / Path('config.toml')
@@ -70,18 +73,6 @@ try:
 except ValueError as err:
     logging.error(err)
     exit(1)
-
-class ExtractTasks(dict):
-    def __contains__(self, srt_name):
-        for k,v in self.items():
-            if v.srt_name == srt_name:
-                return True
-        return False
-    def item(self, srt_name):
-        items = [x for x in self.values() if x.srt_name == srt_name]
-        if items:
-            return items[0]
-        return False
 
 extract_queue = queue.Queue()
 extract_tasks = ExtractTasks()

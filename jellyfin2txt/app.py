@@ -99,6 +99,18 @@ def subtitle_extract(item_id, subtitle_name):
         return Subtitle.subtitle_extract(item_id, subtitle_name)
     return access_denied()
 
+@app.route('/subtitles/<item_id>/<subtitle_name>/extract/status', methods=['POST'])
+def subtitle_extract_status(item_id, subtitle_name):
+    if check_perms(request.data):
+        return Subtitle.subtitle_extract_status(item_id, subtitle_name)
+    return access_denied()
+
+@app.route('/extract_status', methods=['POST'])
+def extract_status():
+    if check_perms(request.data):
+        return Subtitle.extract_status()
+    return access_denied()
+
 def main():
 
     parser = argparse.ArgumentParser()
