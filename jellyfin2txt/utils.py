@@ -1,5 +1,6 @@
 import os
 import json
+import uuid
 from pathlib import PosixPath
 
 from jellyfin2txt.key import Key, CollisionsList
