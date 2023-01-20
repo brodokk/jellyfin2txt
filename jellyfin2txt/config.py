@@ -6,6 +6,7 @@ from flask import Flask
 from jellyfin_apiclient_python.client import JellyfinClient
 import logging
 import queue
+from babelfish import Language
 
 from jellyfin2txt.utils import ExtractTasks, Jellyfin2TextSerializer
 
@@ -77,4 +78,21 @@ except ValueError as err:
 extract_queue = queue.Queue()
 extract_tasks = ExtractTasks()
 
+subs_providers_lang = app.config['SUBS_PROVIDERS_LANGS']
+subs_providers_lang_set = set()
+invalid_language = []
+for lang in subs_providers_lang:
+    try:
+        subs_providers_lang_set.add(Language(lang))
+    except ValueError as err:
+        if 'is not a valid language' in str(err):
+            invalid_language.append(lang)
+        else:
+            raise err
+if invalid_language:
+    logging.error(f'[CONFIG ERROR] Uknown languages for SUBS_PROVIDERS_LANGS: {invalid_language}')
+    exit(1)
+app.config['SUBS_PROVIDERS_LANGS'] = subs_providers_lang_set
+
 logging.basicConfig(encoding='utf-8', level=logging.INFO)
+logging.getLogger('subliminal').setLevel(logging.WARNING)

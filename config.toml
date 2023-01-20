@@ -19,3 +19,12 @@ SUBTITLES_TMP = '/tmp/jellyfin2txt'
 # The proxy url to deserve the subtiles, full http url usable where the subtitles are in one big folder.
 # End slash not needed
 PROXY_URL = "http://myhost.example.com/subtitles"
+
+SUBS_PROVIDERS_LANGS = ['eng', 'deu']
+
+[SUBS_PROVIDERS]
+# See https://subliminal.readthedocs.io/en/latest/api/providers.html for more providers
+addic7ed.username = ''
+addic7ed.password = ''
+opensubtitles.username = ''
+opensubtitles.password = ''

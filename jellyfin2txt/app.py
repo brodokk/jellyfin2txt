@@ -99,6 +99,18 @@ def subtitle_extract(item_id, subtitle_name):
         return Subtitle.subtitle_extract(item_id, subtitle_name)
     return access_denied()
 
+@app.route('/subtitles/<item_id>/discover', methods=['POST'])
+def subtitle_discover(item_id):
+    if check_perms(request.data):
+        return Subtitle.subtitle_discover(item_id)
+    return access_denied()
+
+@app.route('/subtitles/<item_id>/all', methods=['POST'])
+def subtitles_all(item_id):
+    if check_perms(request.data):
+        return Subtitle.subtitles_all(item_id)
+    return access_denied()
+
 @app.route('/subtitles/<item_id>/<subtitle_name>/extract/status', methods=['POST'])
 def subtitle_extract_status(item_id, subtitle_name):
     if check_perms(request.data):

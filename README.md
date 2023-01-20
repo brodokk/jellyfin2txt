@@ -69,6 +69,8 @@ folowing format: `start_index,total_record_count`.
 * `/subtitles/<media_id>/<subtitle_name>` Return the subtitle url available on the proxy.
 * `/subtitles/<media_id>/<subtitle_name>/extract` Extract the subtitle from the server. This process can be very long if the subtitle is burned in the media. See `Extracting hardcoded subtitles`.
 * `/subtiles/<media_id>/<subtitle_name>/extract/status` Return the status of the extraction process in the format `srt_name,status,item_id,item_name,error_message,created_at,updated_at` where `created_at` and `updated_at` are in milliseconds.
+* `/subtiles/<media_id>/discover` Return the subtitles availables based on the language set in the configuration file.
+* `/subtiles/<media_id>/all` Return all the subtitles available on the proxy.
 * `/extract_status` Return the list of all the status of the extraction processes in the format `srt_name,status,item_id,item_name,error_message,created_at,updated_at` where `created_at` and `updated_at` are in milliseconds. Each task is separated by the `\n`.
 
 For authentification the API search in the POST data as a json with the key `auth_key`. The value is

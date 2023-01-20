@@ -11,7 +11,9 @@ from pyasstosrt import Subtitle as pyasstosrtSubtitle
 import tempfile
 from jellyfin2txt.utils import sizeof_fmt
 from pgsrip import pgsrip, Mkv, Options
-from babelfish import Language
+from guessit import guessit
+
+from subliminal import Video, download_best_subtitles, save_subtitles
 
 import logging
 
@@ -31,7 +33,9 @@ from jellyfin2txt.utils import ExtractObject
 class Subtitle:
     subtitles_output_folder = Path(app.config['SUBTITLES_OUTPUT'])
     tmp_subtitles_output_folder = Path(app.config['SUBTITLES_TMP'])
-    proxy_url = Path(app.config['PROXY_URL'])
+    proxy_url = app.config['PROXY_URL']
+    subs_providers_config = app.config['SUBS_PROVIDERS']
+    subs_providers_langs = app.config['SUBS_PROVIDERS_LANGS']
     profile = {
         "Name": "Jellyfin2txt",
         "MusicStreamingTranscodingBitrate": 1280000,
@@ -119,7 +123,7 @@ class Subtitle:
         return name, tt_size
 
     @staticmethod
-    def clean_sub(sub_file, final_filename):
+    def clean_sub(sub_file):
         logging.info('Starting cleaning sub...')
         sub = cleanitSubtitle(sub_file)
         cfg = cleanitConfig()
@@ -202,7 +206,7 @@ class Subtitle:
                             os.replace(tmp_filename, f"{Subtitle.subtitles_output_folder/final_filename}")
                         elif codec == 'mov_text':
                             urllib.request.urlretrieve(url, tmp_filename)
-                            Subtitle.clean_sub(tmp_filename, final_filename)
+                            Subtitle.clean_sub(tmp_filename)
                             os.replace(tmp_filename, f"{Subtitle.subtitles_output_folder/final_filename}")
                         else:
                             format_supported = False
@@ -238,6 +242,64 @@ class Subtitle:
             logging.warning('No subtitle found')
     
         return "Error while returning the srt", 500
+
+    @staticmethod
+    def subtitle_discover(item_id):
+        try:
+            data = client.jellyfin.get_play_info(
+                item_id=item_id,
+                profile=Subtitle.profile
+            )
+        except jellyfin_apiclient_python_HTTPException:
+            return "Item not existing on Jellyfin", 404
+
+        name = Path(data['MediaSources'][0]['Path'].split('/')[-1])
+        video = Video.fromname(name)
+
+        best_subtitles = download_best_subtitles(
+            videos=[video],
+            languages=Subtitle.subs_providers_langs,
+            provider_configs=Subtitle.subs_providers_config
+        )
+
+        subs = []
+        for best_subtitle in best_subtitles[video]:
+            sub = save_subtitles(video, [best_subtitle], directory='tmp')
+            sub_name = sub[0].get_path(video)
+            entry = Path("tmp") / Path(sub_name)
+            Subtitle.clean_sub(entry)
+            os.replace(entry, f"{Subtitle.subtitles_output_folder/sub_name}")
+            subs.append(f"{sub[0].language},{Subtitle.subtitles_output_folder/sub_name}")
+
+        if subs:
+            return ";".join(subs)
+
+        return "Error", 500
+
+    @staticmethod
+    def subtitles_all(item_id):
+        try:
+            data = client.jellyfin.get_play_info(
+                item_id=item_id,
+                profile=Subtitle.profile
+            )
+        except jellyfin_apiclient_python_HTTPException:
+            return "Item not existing on Jellyfin", 404
+
+        name = Path(data['MediaSources'][0]['Path'].split('/')[-1])
+
+        subs = []
+        for file in Subtitle.subtitles_output_folder.iterdir():
+            gfile = guessit(file)
+            gitem = guessit(Subtitle.subtitles_output_folder / name)
+            if file.is_file():
+                if gfile['title'] == gitem['title']:
+                    if 'year' not in gfile or 'year' not in gitem:
+                        logging.warning(f"The file '{file}' doesn't have enough information for match with '{name}'")
+                    else:
+                        subs.append(f"{Subtitle.proxy_url}/{file}")
+
+        return "`".join(subs)
 
     @staticmethod
     def subtitle_extract_thread():
@@ -277,7 +339,7 @@ class Subtitle:
 
             for entry in Path(Subtitle.tmp_subtitles_output_folder).iterdir():
                 if entry.is_file() and entry.suffix == '.srt':
-                    Subtitle.clean_sub(entry, final_filename)
+                    Subtitle.clean_sub(entry)
                     os.replace(entry, f"{Subtitle.subtitles_output_folder/final_filename}")
 
             logging.info("Cleaning downloaded file...")
