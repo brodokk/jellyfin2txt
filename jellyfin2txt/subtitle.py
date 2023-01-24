@@ -268,8 +268,8 @@ class Subtitle:
             sub_name = sub[0].get_path(video)
             entry = Path("tmp") / Path(sub_name)
             Subtitle.clean_sub(entry)
-            os.replace(entry, f"{Subtitle.subtitles_output_folder/sub_name}")
-            subs.append(f"{sub[0].language},{Subtitle.subtitles_output_folder/sub_name}")
+            os.replace(entry, f"{Subtitle.subtitles_output_folder/final_filename}")
+            subs.append(f"{sub[0].language},{Subtitle.subtitles_output_folder/final_filename}")
 
         if subs:
             return ";".join(subs)
@@ -285,10 +285,10 @@ class Subtitle:
             )
         except jellyfin_apiclient_python_HTTPException:
             return "Item not existing on Jellyfin", 404
+        response = ''
 
         name = Path(data['MediaSources'][0]['Path'].split('/')[-1])
 
-        subs = []
         for file in Subtitle.subtitles_output_folder.iterdir():
             gfile = guessit(file)
             gitem = guessit(Subtitle.subtitles_output_folder / name)
@@ -297,9 +297,14 @@ class Subtitle:
                     if 'year' not in gfile or 'year' not in gitem:
                         logging.warning(f"The file '{file}' doesn't have enough information for match with '{name}'")
                     else:
-                        subs.append(f"{Subtitle.proxy_url}/{file}")
+                        try:
+                            lang = gfile['subtitle_language'].name
+                        except AttributeError:
+                            lang = gfile['subtitle_language']
+                        variables = [lang, file.name, f"{Subtitle.proxy_url}/{file}"]
+                        response += ','.join(variables) + ';'
 
-        return "`".join(subs)
+        return response.rstrip(';')
 
     @staticmethod
     def subtitle_extract_thread():

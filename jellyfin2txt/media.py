@@ -59,7 +59,7 @@ class Media:
             dl_url = client.jellyfin.download_url(movie_id)
             stream_url = client.jellyfin.video_url(movie_id)
             img_url = Media._thumbnail(movie_id, thumb_fill_height, thumb_fill_width, thumb_quality)
-            variables = [name, img_url, dl_url, stream_url, trailer_url, external_link]
+            variables = [name, img_url, dl_url, stream_url, trailer_url, external_link, movie_id]
             response += ','.join(variables) + ';'
         return response.rstrip(';')
 
@@ -80,7 +80,7 @@ class Media:
                 if external_url['Name'] == 'IMDb':
                     external_link = external_url['Url']
             img_url = Media._thumbnail(serie_id, thumb_fill_height, thumb_fill_width, thumb_quality)
-            variables = [name, img_url, serie_id, external_link]
+            variables = [name, img_url, serie_id, external_link, serie_id]
             response += ','.join(variables) + ';'
         return response.rstrip(';')
 
