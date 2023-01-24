@@ -268,6 +268,7 @@ class Subtitle:
             sub_name = sub[0].get_path(video)
             entry = Path("tmp") / Path(sub_name)
             Subtitle.clean_sub(entry)
+            final_filename = f"{str(name.stem)}.{sub[0].language.alpha3}.srt"
             os.replace(entry, f"{Subtitle.subtitles_output_folder/final_filename}")
             subs.append(f"{sub[0].language},{Subtitle.subtitles_output_folder/final_filename}")
 
