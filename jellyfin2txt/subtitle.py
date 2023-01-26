@@ -104,7 +104,7 @@ class Subtitle:
                     if media['IsExternal'] or media['IsTextSubtitleStream'] or media['SupportsExternalStream']:
                         logging.info('This format seems to be easly convertable in srt')
             
-        return "`".join(subtitles)
+        return ",".join(subtitles)
 
     def download(item_id, name):
         data = client.jellyfin.download_url(item_id)
@@ -305,7 +305,7 @@ class Subtitle:
                         variables = [lang, file.name, f"{Subtitle.proxy_url}/{file}"]
                         response += ','.join(variables) + ';'
 
-        return response.rstrip(';')
+        return response
 
     @staticmethod
     def subtitle_extract_thread():
