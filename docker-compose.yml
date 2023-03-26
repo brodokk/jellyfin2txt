@@ -1,0 +1,13 @@
+version: "3"
+
+services:
+  jellyfin2txt:
+    build: .
+    command: jellyfin2txt
+    environment:
+      - TESSDATA_PREFIX=/app/tessdata
+    volumes:
+      - "./config.toml:/root/.config/jellyfin2txt/config.toml"
+    ports:
+      - "5000:5000"
+    restart: always
