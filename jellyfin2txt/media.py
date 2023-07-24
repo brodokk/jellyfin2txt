@@ -5,29 +5,31 @@ from jellyfin2txt.config import client, params, app
 class Media:
 
     @staticmethod
-    def _ids(params):
-        items = []
+    def _ids(params, tags=None):
+        if tags:
+            params['Tags'] = tags
         media = client.jellyfin.users('/Items', params=params)
+        items = []
         for item in media['Items']:
             items.append(item['Id'])
         media['Items'] = items
         return media
 
     @staticmethod
-    def _movies_ids(start_index=0, limit=100):
+    def _movies_ids(start_index=0, limit=100, tags=None):
         params['StartIndex'] = start_index
         params['Limit'] = limit
         params['IncludeItemTypes'] = 'Movie'
         params['ParentId'] = client.movies_id
-        return Media._ids(params)
+        return Media._ids(params, tags)
 
     @staticmethod
-    def _series_ids(start_index=0, limit=100):
+    def _series_ids(start_index=0, limit=100, tags=None):
         params['StartIndex'] = start_index
         params['Limit'] = limit
         params['IncludeItemTypes'] = 'Series'
         params['ParentId'] = client.series_id
-        return Media._ids(params)
+        return Media._ids(params, tags)
 
     @staticmethod
     def _thumbnail(item_id, fillHeight=320, fillWidth=213, quality=96):
@@ -40,9 +42,9 @@ class Media:
     @staticmethod
     def movies(
         start_index=0, limit=100, thumb_fill_height=320, thumb_fill_width=213,
-        thumb_quality=96
+        thumb_quality=96, tags=None
     ):
-        movies_ids = Media._movies_ids(start_index, limit)
+        movies_ids = Media._movies_ids(start_index, limit, tags)
         response = "{},{};".format(
             movies_ids['StartIndex'], movies_ids['TotalRecordCount']
         )
@@ -66,9 +68,9 @@ class Media:
     @staticmethod
     def series(
         start_index=0, limit=100, thumb_fill_height=320, thumb_fill_width=213,
-        thumb_quality=96
+        thumb_quality=96, tags=None
     ):
-        series_ids = Media._series_ids(start_index, limit)
+        series_ids = Media._series_ids(start_index, limit, tags)
         response = "{},{};".format(
             series_ids['StartIndex'], series_ids['TotalRecordCount']
         )

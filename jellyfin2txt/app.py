@@ -54,6 +54,7 @@ def movies():
             request.args.get("ThumbFillHeight", 320),
             request.args.get("ThumbFillWidth", 213),
             request.args.get("ThumbQuality", 96),
+            request.args.get("tags", '').split(','),
         )
     return access_denied()
 
@@ -66,6 +67,7 @@ def series():
             request.args.get("ThumbFillHeight", 320),
             request.args.get("ThumbFillWidth", 213),
             request.args.get("ThumbQuality", 96),
+            request.args.get("tags", '').split(','),
         )
     return access_denied()
 
