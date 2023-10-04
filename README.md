@@ -1,11 +1,11 @@
 # jellyfin2txt
 
-Simple API for NeosVr for getting movies and series from a jellyfin server.
+Simple API for Resonite for getting movies and series from a jellyfin server.
 
 Note: Like Jellyfin the developers of the server and the clients are not
 responsible of what **YOU** are doing with this tools.
 
-The issues for the repository handle both this server and the NeosVR client.
+The issues for the repository handle both this server and the Resonite client.
 
 ## Installation
 
@@ -93,10 +93,10 @@ Example with curl:
 curl -d '{"auth_key":"xxxxxxxxxxxx"}' -H "Content-Type: application/json" -X POST https://jellyfin2text.example.com
 ```
 
-## NeosVr clients
+## Resonite clients
 
-A public folder is available for a basic NeosVr client called `JellyfinClient Beta`:
-neosrec:///G-The-french-microwave/R-cb7e384b-3879-4395-be1f-ea4a74c09705
+A public folder is available for a basic Resonite client called `JellyfinClient Beta` (Old NeosVR client not tested in Resonite!):
+resrec:///G-The-french-microwave/R-cb7e384b-3879-4395-be1f-ea4a74c09705
 
 ### Configuration
 
@@ -131,7 +131,7 @@ If you want to be able to extract file in this format you free RAM **must** be b
 for have the movie fit inside. Example if you movie is 2GB you need more than 2GB of RAM
 available.
 
-### Know issues
+### Know issues (From NeosVR, could be different on Resonite)
 
 - The stream url didnt work yet probably because of this issue: https://github.com/Neos-Metaverse/NeosPublic/issues/2812
 - The download url didnt work because Neos dont reconize the file extension
