@@ -4,8 +4,6 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends libgl1 mkvto
 
 WORKDIR /app
 
-COPY tessdata_best /app/tessdata_best
-
 COPY jellyfin2txt /app/jellyfin2txt
 
 COPY pyproject.toml /app
