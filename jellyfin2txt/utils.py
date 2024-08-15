@@ -6,7 +6,7 @@ from time import time
 
 from jellyfin2txt.key import Key, CollisionsList
 
-def _read_keyfile():
+def _read_keyfile() -> CollisionsList:
     keys_json = {}
     keyfile = 'keyfile.json'
     if os.path.isfile(keyfile):
@@ -17,7 +17,20 @@ def _read_keyfile():
         keys.append(Key(**key), 'id')
     return keys
 
-def sizeof_fmt(num, suffix="B"):
+def sizeof_fmt(num: int, suffix: str = "B") -> str:
+    """Convert a file size in bytes to a human readable format.
+
+    This function takes a size in bytes and converts it into a more
+    easly readable format using binary prefixes (KiB, MiB, GiB, etc.).
+    The conversion is based on a powers of 1024.
+
+    Args:
+        num (int): The size in bytes.
+        suffix (str, optional): The unit suffix (eg., "B" for bytes). Defaults to "B".
+
+    Returns:
+        str: The human-readable size with an appropriate unit prefix.
+    """
     for unit in ["", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"]:
         if abs(num) < 1024.0:
             return f"{num:3.1f}{unit}{suffix}"

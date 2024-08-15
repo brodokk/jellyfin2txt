@@ -5,35 +5,48 @@ from jellyfin2txt.config import client, params, app
 class Media:
 
     @staticmethod
-    def _ids(params, tags=None):
+    def _ids(params: dict, tags: list = None) -> dict:
         if tags:
-            params['Tags'] = tags
-        media = client.jellyfin.users('/Items', params=params)
-        items = []
+            params['Tags']: list = tags
+        media: dict = client.jellyfin.users('/Items', params=params)
+        items: list = []
         for item in media['Items']:
             items.append(item['Id'])
         media['Items'] = items
         return media
 
     @staticmethod
-    def _movies_ids(start_index=0, limit=100, tags=None):
-        params['StartIndex'] = start_index
-        params['Limit'] = limit
-        params['IncludeItemTypes'] = 'Movie'
-        params['ParentId'] = client.movies_id
+    def _movies_ids(
+        start_index: int = 0,
+        limit: int = 100, tags:
+        list = None,
+    ) -> dict:
+        params['StartIndex']: int = start_index
+        params['Limit']: int = limit
+        params['IncludeItemTypes']: str = 'Movie'
+        params['ParentId']: str = client.movies_id
         return Media._ids(params, tags)
 
     @staticmethod
-    def _series_ids(start_index=0, limit=100, tags=None):
-        params['StartIndex'] = start_index
-        params['Limit'] = limit
-        params['IncludeItemTypes'] = 'Series'
-        params['ParentId'] = client.series_id
+    def _series_ids(
+        start_index: int = 0,
+        limit: int = 100,
+        tags: list = None,
+    ) -> dict:
+        params['StartIndex']: int = start_index
+        params['Limit']: int = limit
+        params['IncludeItemTypes']: str = 'Series'
+        params['ParentId']: str = client.series_id
         return Media._ids(params, tags)
 
     @staticmethod
-    def _thumbnail(item_id, fillHeight=320, fillWidth=213, quality=96):
-        server_url = app.config['SERVER_URL']
+    def _thumbnail(
+        item_id: str,
+        fillHeight: int = 320,
+        fillWidth: int = 213,
+        quality: int = 96,
+    ) -> str:
+        server_url: str = app.config['SERVER_URL']
         return (
             f'{server_url}/Items/{item_id}/Images/Primary?fillHeight={fillHeight}'
             f'&fillWidth={fillWidth}&quality={quality}'
@@ -41,79 +54,87 @@ class Media:
 
     @staticmethod
     def movies(
-        start_index=0, limit=100, thumb_fill_height=320, thumb_fill_width=213,
-        thumb_quality=96, tags=None
-    ):
-        movies_ids = Media._movies_ids(start_index, limit, tags)
-        response = "{},{};".format(
+        start_index: int = 0,
+        limit: int = 100,
+        thumb_fill_height: int = 320,
+        thumb_fill_width: int = 213,
+        thumb_quality: int = 96,
+        tags: str = None,
+    ) -> str:
+        movies_ids: dict = Media._movies_ids(start_index, limit, tags)
+        response: str = "{},{};".format(
             movies_ids['StartIndex'], movies_ids['TotalRecordCount']
         )
         for movie_id in movies_ids['Items']:
-            movie = client.jellyfin.get_item(movie_id)
-            trailer_url = ""
+            movie: dict = client.jellyfin.get_item(movie_id)
+            trailer_url: str = ""
             if movie['RemoteTrailers']:
-                trailer_url = movie['RemoteTrailers'][0]['Url']
-            name = movie['Name']
-            external_link = ""
+                trailer_url: str = movie['RemoteTrailers'][0]['Url']
+            name: str = movie['Name']
+            external_link: str = ""
             for external_url in movie['ExternalUrls']:
                 if external_url['Name'] == 'IMDb':
-                    external_link = external_url['Url']
-            dl_url = client.jellyfin.download_url(movie_id)
-            stream_url = client.jellyfin.video_url(movie_id)
-            img_url = Media._thumbnail(movie_id, thumb_fill_height, thumb_fill_width, thumb_quality)
-            variables = [name, img_url, dl_url, stream_url, trailer_url, external_link, movie_id]
+                    external_link: str = external_url['Url']
+            dl_url: str = client.jellyfin.download_url(movie_id)
+            stream_url: str = client.jellyfin.video_url(movie_id)
+            img_url: str = Media._thumbnail(movie_id, thumb_fill_height, thumb_fill_width, thumb_quality)
+            variables: list = [name, img_url, dl_url, stream_url, trailer_url, external_link, movie_id]
             response += ','.join(variables) + ';'
         return response.rstrip(';')
 
     @staticmethod
     def series(
-        start_index=0, limit=100, thumb_fill_height=320, thumb_fill_width=213,
-        thumb_quality=96, tags=None
-    ):
-        series_ids = Media._series_ids(start_index, limit, tags)
-        response = "{},{};".format(
+        start_index: int = 0,
+        limit: int = 100,
+        thumb_fill_height: int = 320,
+        thumb_fill_width: int = 213,
+        thumb_quality: int = 96,
+        tags: list = None
+    ) -> str:
+        series_ids: dict = Media._series_ids(start_index, limit, tags)
+        response: str = "{},{};".format(
             series_ids['StartIndex'], series_ids['TotalRecordCount']
         )
         for serie_id in series_ids['Items']:
-            serie = client.jellyfin.get_item(serie_id)
-            name = serie['Name']
-            external_link = ""
+            serie: dict = client.jellyfin.get_item(serie_id)
+            name: str = serie['Name']
+            external_link: str = ""
             for external_url in serie['ExternalUrls']:
                 if external_url['Name'] == 'IMDb':
-                    external_link = external_url['Url']
-            img_url = Media._thumbnail(serie_id, thumb_fill_height, thumb_fill_width, thumb_quality)
-            variables = [name, img_url, serie_id, external_link, serie_id]
+                    external_link: str = external_url['Url']
+            img_url: str = Media._thumbnail(serie_id, thumb_fill_height, thumb_fill_width, thumb_quality)
+            variables: str = [name, img_url, serie_id, external_link, serie_id]
             response += ','.join(variables) + ';'
         return response.rstrip(';')
 
     @staticmethod
-    def seasons(serie_id):
-        seasons = client.jellyfin.get_seasons(serie_id)
-        response = "{},{};".format(
+    def seasons(serie_id: str) -> str:
+        seasons: dict = client.jellyfin.get_seasons(serie_id)
+        response: str = "{},{};".format(
             seasons['StartIndex'], seasons['TotalRecordCount']
         )
         for season in seasons['Items']:
-            name = season['Name']
-            season_id = season['Id']
-            img_url = Media._thumbnail(season_id)
-            variables = [name, img_url, season_id]
+            name: str = season['Name']
+            season_id: str = season['Id']
+            img_url: str = Media._thumbnail(season_id)
+            variables: str = [name, img_url, season_id]
             response += ','.join(variables) + ';'
         return response.rstrip(';')
 
     @staticmethod
-    def episodes(serie_id, season_id):
-        episodes = client.jellyfin.get_season(serie_id, season_id)
-        response = "{},{};".format(
+    def episodes(serie_id: str, season_id: str) -> str:
+        episodes: dict = client.jellyfin.get_season(serie_id, season_id)
+        response: str = "{},{};".format(
             episodes['StartIndex'], episodes['TotalRecordCount']
         )
 
         for episode in episodes['Items']:
-            name = episode['Name']
-            episode_id = episode['Id']
-            img_url = Media._thumbnail(episode_id)
-            dl_url = client.jellyfin.download_url(episode_id)
-            stream_url = client.jellyfin.video_url(episode_id)
-            variables = [name, img_url, episode_id, dl_url, stream_url]
+            name: str = episode['Name']
+            episode_id: str = episode['Id']
+            img_url: str = Media._thumbnail(episode_id)
+            dl_url: str = client.jellyfin.download_url(episode_id)
+            stream_url: str = client.jellyfin.video_url(episode_id)
+            variables: str = [name, img_url, episode_id, dl_url, stream_url]
             response += ','.join(variables) + ';'
         return response.rstrip(';')
 

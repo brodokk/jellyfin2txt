@@ -3,6 +3,7 @@ import urllib
 import psutil
 import uuid
 from urllib.request import urlopen
+from http.client import HTTPResponse
 from functools import partial
 from pathlib import Path
 from cleanit import Config as cleanitConfig
@@ -19,24 +20,16 @@ import logging
 
 from  jellyfin_apiclient_python.exceptions import HTTPException as jellyfin_apiclient_python_HTTPException
 
-#item_id='24b6d39b4779259fda28d856e9479b66' # psg quick
-#item_id='ce096db83d3454055cf0b5315284c947' # pgs slow: a lot
-#item_id='32b81e45fa24eef35b6305bbd5c2329a' # move_text
-#item_id='c792916f205221d1d84c73baad5e9814'
-#5be3fa7d8dc9524a52426b8e0ba73a49 subrip forced
-#98b7b058a754399f2513631a0c65bdce subrip external
-#f17589e06f4724ed4d416449efe51b8a ass
-
 from jellyfin2txt.config import client, app, extract_queue, extract_tasks
 from jellyfin2txt.utils import ExtractObject
 
 class Subtitle:
-    subtitles_output_folder = Path(app.config['SUBTITLES_OUTPUT'])
-    tmp_subtitles_output_folder = Path(app.config['SUBTITLES_TMP'])
-    proxy_url = app.config['PROXY_URL']
-    subs_providers_config = app.config['SUBS_PROVIDERS']
-    subs_providers_langs = app.config['SUBS_PROVIDERS_LANGS']
-    profile = {
+    subtitles_output_folder: Path = Path(app.config['SUBTITLES_OUTPUT'])
+    tmp_subtitles_output_folder: Path = Path(app.config['SUBTITLES_TMP'])
+    proxy_url: str = app.config['PROXY_URL']
+    subs_providers_config: str = app.config['SUBS_PROVIDERS']
+    subs_providers_langs: str = app.config['SUBS_PROVIDERS_LANGS']
+    profile: dict = {
         "Name": "Jellyfin2txt",
         "MusicStreamingTranscodingBitrate": 1280000,
         "TimelineOffsetSeconds": 5,
@@ -66,54 +59,54 @@ class Subtitle:
             }
         ]
     }
-    neos_subtitles_file_supported = ['subrip']
-    neos_converted_subtitles_file_supported = ['ass', 'mov_text']
-    neos_extracted_subtitles_file_supported = ['PGSSUB']
+    resonite_subtitles_file_supported: list = ['subrip']
+    resonite_converted_subtitles_file_supported: list = ['ass', 'mov_text']
+    resonite_extracted_subtitles_file_supported: list = ['PGSSUB']
 
     @staticmethod
-    def subtitles(item_id):
+    def subtitles(item_id: str) -> str:
         try:
-            data = client.jellyfin.get_play_info(
+            data: dict = client.jellyfin.get_play_info(
                 item_id=item_id,
                 profile=Subtitle.profile
             )
         except jellyfin_apiclient_python_HTTPException:
             return "Item not existing on Jellyfin", 404
 
-        subtitles = []
+        subtitles: list = []
 
-        name = data['MediaSources'][0]['Path'].split('/')[-1]
-    
+        name: str = data['MediaSources'][0]['Path'].split('/')[-1]
+
         for media in data['MediaSources'][0]['MediaStreams']:
             if media['Type'] == 'Subtitle':
-                format_supported = False
-                codec = media["Codec"]
-                format_supported = False
+                format_supported: bool = False
+                codec: str = media["Codec"]
+                format_supported: bool = False
                 if (
                     (media['IsExternal'] or media['IsTextSubtitleStream'] or media['SupportsExternalStream'])
-                    or codec in Subtitle.neos_subtitles_file_supported
-                    or codec in Subtitle.neos_converted_subtitles_file_supported
-                    or codec in Subtitle.neos_extracted_subtitles_file_supported
+                    or codec in Subtitle.resonite_subtitles_file_supported
+                    or codec in Subtitle.resonite_converted_subtitles_file_supported
+                    or codec in Subtitle.resonite_extracted_subtitles_file_supported
                 ):
-                    format_supported = True
-                    
+                    format_supported: bool = True
+
                 if format_supported:
                     subtitles.append(media['DisplayTitle'])
                 else:
                     logging.warning(f'format {codec} not suported for item id {item_id}')
                     if media['IsExternal'] or media['IsTextSubtitleStream'] or media['SupportsExternalStream']:
                         logging.info('This format seems to be easly convertable in srt')
-            
+
         return ",".join(subtitles)
 
-    def download(item_id, name):
-        data = client.jellyfin.download_url(item_id)
-        response = urlopen(data)
-        tt_size = int(response.headers["Content-Length"])
+    def download(item_id: str, name: str) -> (str, int):
+        data: str = client.jellyfin.download_url(item_id)
+        response: HTTPResponse = urlopen(data)
+        tt_size: int = int(response.headers["Content-Length"])
         if name.is_file() and name.stat().st_size == tt_size:
             logging.warning('File already exist and seems to be the same, ignoring dl...')
         else:
-            hz_tt_size = sizeof_fmt(tt_size)
+            hz_tt_size: str = sizeof_fmt(tt_size)
             size = 0
             with open(name, 'wb') as dest_file:
                 for dat in iter(partial(response.read, 32768), b''):
@@ -178,7 +171,7 @@ class Subtitle:
                     subtitle_name_name = True
         if not subtitle_name_name:
             return f"Subtitle {subtitle_name} not found for this media", 404
-    
+
         for media in data['MediaSources'][0]['MediaStreams']:
             format_supported = False
             if media['Type'] == 'Subtitle':
@@ -195,10 +188,10 @@ class Subtitle:
                     else:
                         url = f"{app.config['SERVER_URL']}/Videos/{item_id}/{item_id}/Subtitles/{media['Index']}/0/Stream.{codec}"
                     tmp_filename = Subtitle.tmp_subtitles_output_folder / final_filename 
-                    if codec in Subtitle.neos_subtitles_file_supported:
+                    if codec in Subtitle.resonite_subtitles_file_supported:
                         urllib.request.urlretrieve(url, tmp_filename)
                         os.replace(tmp_filename, f"{Subtitle.subtitles_output_folder/final_filename}")
-                    if codec in Subtitle.neos_converted_subtitles_file_supported:
+                    if codec in Subtitle.resonite_converted_subtitles_file_supported:
                         if codec == 'ass':
                             urllib.request.urlretrieve(url, tmp_filename)
                             sub = pyasstosrtSubtitle(tmp_filename)
@@ -211,7 +204,7 @@ class Subtitle:
                         else:
                             format_supported = False
                     format_supported = True
-                elif  media['Codec'] in Subtitle.neos_extracted_subtitles_file_supported:
+                elif  media['Codec'] in Subtitle.resonite_extracted_subtitles_file_supported:
                     srt_file = Subtitle.subtitles_output_folder / final_filename
                     if srt_file.is_file():
                         return "Subtitle already extracted"
@@ -240,7 +233,7 @@ class Subtitle:
                         logging.info('This format seems to be easly convertable in srt')
         if not data['MediaSources'][0]['MediaStreams']:
             logging.warning('No subtitle found')
-    
+
         return "Error while returning the srt", 500
 
     @staticmethod

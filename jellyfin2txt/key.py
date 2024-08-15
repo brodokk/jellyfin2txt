@@ -66,43 +66,43 @@ class Key:
 class KeyManager:
     keys: CollisionsList[Key]
 
-    def __init__(self, *args, **kargs):
+    def __init__(self, *args, **kargs) -> None:
         self.keys = CollisionsList()
         self.keyfile = "keyfile.json"
         self._load_keyfile()
         super().__init__()
 
-    def _load_keyfile(self):
+    def _load_keyfile(self) -> None:
         keys_json = self._read_keyfile()
         for key in keys_json:
             self.keys.append(Key(**key), 'id')
 
-    def _save_key(self):
+    def _save_key(self) -> None:
         self._write_keyfile()
 
-    def _revoke_key(self, id):
+    def _revoke_key(self, id: int) -> None:
         self.keys.update('id', id, 'revoked', True)
         self._write_keyfile()
 
-    def _read_keyfile(self):
+    def _read_keyfile(self) -> dict:
         data = {}
         if os.path.isfile(self.keyfile):
             with open(self.keyfile, 'r') as file:
                 data = json.load(file)
         return data
 
-    def _write_keyfile(self):
+    def _write_keyfile(self) -> None:
         with open(self.keyfile, 'w') as f:
             json.dump(self.keys, f, ensure_ascii=False, cls=EnhancedJSONEncoder)
 
-    def _gen_table(self, keys, headers=["id", "revoked", "comment", "key"]):
+    def _gen_table(self, keys: list, headers=["id", "revoked", "comment", "key"]) -> str:
         table = []
         for key in keys:
             row = [key.id, key.revoked, key.comment, key.key]
             table.append(row)
         return tabulate(table, headers, tablefmt="grid")
 
-    def genkey(self, comment=""):
+    def genkey(self, comment: str ="") -> None:
         key = secrets.token_urlsafe(16)
         if not self.keys.contains('key', key):
             index = str(1)
@@ -114,14 +114,14 @@ class KeyManager:
         else:
             print("Key already exist")
 
-    def revokekey(self, id):
+    def revokekey(self, id: int) -> None:
         if self.keys.contains('id', id):
             self._revoke_key(id)
             print(self._gen_table(self.keys))
         else:
             print("Key not found")
 
-    def listkeys(self):
+    def listkeys(self) -> None:
         print(self._gen_table(self.keys))
 
 
