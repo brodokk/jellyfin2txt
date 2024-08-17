@@ -1,0 +1,11 @@
+Flask~=2.3.3
+jellyfin2txt~=0.1.0
+tabulate~=0.8.10
+toml~=0.10.2
+babelfish~=0.6.1
+psutil~=5.9.8
+cleanit~=0.4.8
+pyasstosrt~=1.4.0
+pgsrip~=0.1.11
+guessit~=3.8.0
+subliminal~=2.2.1

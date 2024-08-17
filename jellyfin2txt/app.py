@@ -1,44 +1,45 @@
 #!/bin/python
 
-from typing import Optional
-import tempfile
-import urllib.request
-import os
-from pathlib import Path
-
 import sys
 import json
-import argparse
-import logging
-import threading
+from argparse import (
+    ArgumentParser,
+    Namespace,
+)
+from threading import Thread
 
 from flask import request
 
-from jellyfin2txt.key import Key
-from jellyfin2txt.config import client, app, params, settings
+from jellyfin2txt.key import KeysValidator
+from jellyfin2txt.config import (
+    client,
+    app,
+)
 from jellyfin2txt.media import Media
 from jellyfin2txt.subtitle import Subtitle
 from jellyfin2txt.utils import _read_keyfile
 
 def check_perms(data: bytes) -> bool:
-    """Check if the given data contains a valid and non-revoked authorization key.
+    """Validate the authorization key in JSON data.
 
-    This function decodes a bytes object to a string and attempts to parse it as
-    JSON object. It checks whether the JSON contains "auth_key" field, and if so,
-    verifies that the key exists in a list of valid keys and has not been revoked.
+    Decodes a bytes object to a string and attempts to parse it as
+    JSON. It checks for the presence of an "auth_key" field. validating the
+    key as existing and non-revoked based on an internal list.
 
-    Args:
-        data (bytes): The input data in bytes, expected to contain a JSON-encoded string.
+    The key list is stored in a file named `keyfile.json`.
 
-    Returns:
-        bool: Returns True if the data contains a valid, non-revoked authorization key;
-              otherwise, returns False.
+    :param data: The input data containing a JSON-encoded string.
+
+    :returns:
+        Possible values:
+            - True: If the data contains a valid, non-revoked authorization key.
+            - False:  If the data contains an invalid, revoked or if the JSON parsing fails.
     """
     data_str: str = data.decode('utf-8')
     try:
         data_json: dict = json.loads(data_str)
         if "auth_key" in data_json.keys():
-            keys: CollisionsList = _read_keyfile()
+            keys: KeysValidator = _read_keyfile()
             if keys.contains('key', data_json['auth_key']):
                 if not keys.get('key', data_json['auth_key']).revoked:
                     return True
@@ -49,29 +50,26 @@ def check_perms(data: bytes) -> bool:
         return False
 
 def access_denied() -> (str, int):
-    """Generate an access denied response.
+    """Build HTTP access denied response.
 
-    This function returns a tuple containing an error message and an HTTP status code,
-    typically used when a user provides an invalid authorization key.
+    Typically used to respond to requests with invalid authentication keys.
 
-    Args:
-        None
-
-    Returns:
-        tuple: A tuple where the first element is a string message ('Invalid auth_key!')
-               and the second element is an integer representing the HTTP status code (403).
+    :returns:
+        A tuple containing:
+            - :py:class:`str`: The error message 'Invalid auth_key!'.
+            - :py:class:`int`: The HTTP Status code 403 (Forbidden).
     """
     return 'Invalid auth_key!', 403
 
 @app.route('/')
 def index() -> str:
-    """Render the home page of the API.
+    """Render the index page for the API.
 
-    This function handles the root URL of the web application and returns a simple HTML string
+    Handles the root URL of the web application and returns a simple HTML string
     describing the API and providing a link to the source code.
 
-    Returns:
-        str: An HTML string that provides information about the API and a link to its GitHub repository.
+    :returns:
+        The HTML content.
     """
 
     html: str = """
@@ -84,21 +82,21 @@ def index() -> str:
 def movies() -> str:
     """Retrieve a list of movies.
 
-    This function first checks if the request contains a valid and non-revoked authorization
-    key If the authorization is successful, it retrieves and returns a list of movies based
-    on the query parameters provided. If the authorization fails, it returns an access denied
+    First checks if the request contains a valid and non-revoked authorization key.
+    If the authorization is successful, it retrieves and returns a list of movies based
+    on the query parameters provided. If the authorization fails, it returns access denied
     response.
 
-    Query Parameters:
-        StartIndex (int, optional): The starting index for the movies list (default is 0).
-        Limit (int, optional): The maximum number of movies to return (default is 100).
-        ThumbFillHeight (int, optional): The desired thumbnail height (default is 320).
-        ThumbFillWidth (int, optional): The desired thumbnail width (default is 213).
-        ThumbQuality (int, optional): The quality of the thumbnails (default is 96).
-        tags (str, optional): A comma-separated list of tags to filter the movies (default is an empty string).
+    QUERY PARAMETERS:
+        - StartIndex (:py:class:`int`, optional): The starting index for the movies list (default: 0).
+        - Limit (:py:class:`int`, optional): The maximum number of movies to return (default: 100).
+        - ThumbFillHeight (:py:class:`int`, optional): The desired thumbnail height (default: 320).
+        - ThumbFillWidth (:py:class:`int`, optional): The desired thumbnail width (default: 213).
+        - ThumbQuality (:py:class:`int`, optional): The quality of the thumbnails (default: 96).
+        - tags (:py:class:`str`, optional): A comma-separated list of tags to filter the movies (default: '').
 
-    Returns:
-        str: A JSON-encoded string in a Resonite compatible format of movies if the authorization is valid, otherwise an access denied message.
+    :returns:
+        A JSON-encoded string in a Resonite compatible format of movies if the authorization is valid, otherwise an access denied message.
     """
     if check_perms(request.data):
         return Media.movies(
@@ -115,21 +113,23 @@ def movies() -> str:
 def series() -> str:
     """Retrieve a list of TV shows.
 
-    This function first checks if the request contains a valid and non-revoked authorization
-    key If the authorization is successful, it retrieves and returns a list of TV shows based
+    First checks if the request contains a valid and non-revoked authorization key.
+    If the authorization is successful, it retrieves and returns a list of TV shows based
     on the query parameters provided. If the authorization fails, it returns an access denied
     response.
 
-    Query Parameters:
-        StartIndex (int, optional): The starting index for the TV shows list (default is 0).
-        Limit (int, optional): The maximum number of TV shows to return (default is 100).
-        ThumbFillHeight (int, optional): The desired thumbnail height (default is 320).
-        ThumbFillWidth (int, optional): The desired thumbnail width (default is 213).
-        ThumbQuality (int, optional): The quality of the thumbnails (default is 96).
-        tags (str, optional): A comma-separated list of tags to filter the TV shows (default is an empty string).
+    QUERY PARAMETERS:
+        - StartIndex (:py:class:`int`, optional): The starting index for the TV shows list (default: 0).
+        - Limit (:py:class:`int`, optional): The maximum number of TV shows to return (default: 100).
+        - ThumbFillHeight (:py:class:`int`, optional): The desired thumbnail height (default: 320).
+        - ThumbFillWidth (:py:class:`int`, optional): The desired thumbnail width (default: 213).
+        - ThumbQuality (:py:class:`int`, optional): The quality of the thumbnails (default: 96).
+        - tags (:py:class:`str`, optional): A comma-separated list of tags to filter the TV shows
+        (default is an empty string).
 
-    Returns:
-        str: A JSON-encoded string in a Resonite compatible format of TV shows if the authorization is valid, otherwise an access denied message.
+    :returns:
+        A JSON-encoded string in a Resonite compatible format of TV shows if the authorization is valid
+        otherwise an access denied message.
     """
     if check_perms(request.data):
         return Media.series(
@@ -146,16 +146,15 @@ def series() -> str:
 def seasons(serie_id: str) -> str:
     """Retrieve a list of seasons for a specific TV show.
 
-    This function first checks if the request contains a valid and non-revoked authorization
-    key If the authorization is successful, it retrieves and returns the list of seasons for
+    First checks if the request contains a valid and non-revoked authorization key.
+    If the authorization is successful, it retrieves and returns the list of seasons for
     the specified TV show. If the authorization fails, it returns an access denied response.
 
-    Args:
-        serie_id (str): The unique identifier for the TV show.
+    :param serie_id: The unique identifier for the TV show.
 
     Returns:
-        str: A JSON-encoded string in a Resonite compatible format of the list of seasons for
-             the specified TV show if the authorization is valid, otherwise an access denied message.
+        A JSON-encoded string in a Resonite compatible format of the list of seasons for
+        the specified TV show if the authorization is valid, otherwise an access denied message.
     """
     if check_perms(request.data):
         return Media.seasons(serie_id)
@@ -165,18 +164,17 @@ def seasons(serie_id: str) -> str:
 def episodes(serie_id: str, season_id: str) -> str:
     """Retrieve a list of episodes for a specific season of a TV show.
 
-    This function first checks if the request contains a valid and non-revoked authorization
+    First checks if the request contains a valid and non-revoked authorization
     key If the authorization is successful, it retrieves and returns the list episodes of the
     specified seasons of a TV show. If the authorization fails, it returns an access denied response.
 
-    Args:
-        serie_id (str): The unique identifier for the TV show.
-        season_id (str): The unique identifier for the season within the specified TV show.
+    :param serie_id: The unique identifier for the TV show.
+    :param season_id: The unique identifier for the season within the specified TV show.
 
-    Returns:
-        str: A JSON-encoded string in a Resonite compatible format of the list of episodes of
-             the specified seasons for of a TV show if the authorization is valid, otherwise an
-             access denied message.
+    :returns:
+        A JSON-encoded string in a Resonite compatible format of the list of episodes of
+        the specified seasons for of a TV show if the authorization is valid, otherwise
+        access denied message.
     """
     if check_perms(request.data):
         return Media.episodes(serie_id, season_id)
@@ -186,16 +184,16 @@ def episodes(serie_id: str, season_id: str) -> str:
 def subtitles(item_id: str) -> str:
     """Retrieve a list of subtitles for a specific media.
 
-    This function first checks if the request contains a valid and non-revoked authorization
+    First checks if the request contains a valid and non-revoked authorization
     key If the authorization is successful, it retrieves and returns the list subtitles for
-    the media. If the authorization fails, it returns an access denied response.
+    the media. If the authorization fails, it returns access denied response.
+    This return the subtitles available on the Jellyfin server only.
 
-    Args:
-        item_id (str): The unique identifier for the media.
+    :param item_id: The unique identifier for the media.
 
-    Returns:
-        str: A JSON-encoded string in a Resonite compatible format of the list of the subtitles
-             for a specific media if the authorization is valid, otherwise an access denied message.
+    :returns:
+        A JSON-encoded string in a Resonite compatible format of the list of the subtitles
+        for a specific media if the authorization is valid, otherwise an access denied message.
     """
     if check_perms(request.data):
         return Subtitle.subtitles(item_id)
@@ -203,20 +201,19 @@ def subtitles(item_id: str) -> str:
 
 @app.route('/subtitles/<item_id>/<subtitle_name>', methods=['POST'])
 def subtitle(item_id: str, subtitle_name: str) -> str:
-    """Retrieve a specific subtitle for a media.
+    """Retrieve a specific cached subtitle for a media.
 
-    This function first checks if the request contains a valid and non-revoked authorization
+    First checks if the request contains a valid and non-revoked authorization
     key If the authorization is successful, it retrieves and returns the subtitle access URL
-    of the media based on it's name. If the authorization fails, it returns an access denied
+    of the media based on its name. If the authorization fails, it returns an access denied
     response.
 
-    Args:
-        item_id (str): The unique identifier for the media.
-        subtitle_name (str): The name of the subtitle for the media.
+    :param item_id: The unique identifier for the media.
+    :param subtitle_name: The name of the subtitle for the media.
 
-    Returns:
-        str: A JSON-encoded string in a Resonite compatible format of the list of the subtitles
-             for a specific media if the authorization is valid, otherwise an access denied message.
+    :returns:
+        A JSON-encoded string in a Resonite compatible format of the list of the subtitles
+        for a specific media if the authorization is valid, otherwise an access denied message.
     """
     if check_perms(request.data):
         return Subtitle.subtitle(item_id, subtitle_name)
@@ -224,22 +221,21 @@ def subtitle(item_id: str, subtitle_name: str) -> str:
 
 @app.route('/subtitles/<item_id>/<subtitle_name>/extract', methods=['POST'])
 def subtitle_extract(item_id: str, subtitle_name: str) -> str:
-    """Extract subtitle from a media.
+    """Extract and cache subtitle from a media.
 
-    This function first checks if the request contains a valid and non-revoked authorization
+    First checks if the request contains a valid and non-revoked authorization
     key. If authorization is successful, it starts the extraction process for the subtitle
     with the specified name for the media and returns a status indicating whether the
     extraction job was successfully started. If the authorization fails, it returns an
     access denied response.
 
-    Args:
-        item_id (str): The unique identifier for the media.
-        subtitle_name (str): The name of the subtitle for the media.
+    :param item_id: The unique identifier for the media.
+    :param subtitle_name: The name of the subtitle for the media.
 
-    Returns:
-        str: A status message indicating whether the extraction job was successfully started
-              or if there was an issue (e.g., "Extraction job started" or "Failed to start
-              extraction"), or an access denied message if the authorization fails.
+    returns:
+        A status message indicating whether the extraction job was successfully started
+        or if there was an issue (e.g., "Extraction job started" or "Failed to start
+        extraction"), or an access denied message if the authorization fails.
     """
     if check_perms(request.data):
         return Subtitle.subtitle_extract(item_id, subtitle_name)
@@ -247,15 +243,17 @@ def subtitle_extract(item_id: str, subtitle_name: str) -> str:
 
 @app.route('/subtitles/<item_id>/discover', methods=['POST'])
 def subtitle_discover(item_id: str) -> str:
-    """Generate external subtitle list.
+    """Discover and cache the best subtitle available for a media.
 
-    This will also start the task to make this subtitle available.
+    First checks if the request contains a valid and non-revoked authorization key.
+    If the authorization is successful, it starts the extraction process for the subtitles
+    of the media. If the authorization fails, it returns an access denied response.
+    The caching will be done in a separate thread.
 
-    Args:
-        item_id (str): The Jellyfin media id.
+    :param item_id: The unique identifier for the media.
 
-    Returns:
-        str: The list of external subtitles available for this Jellyfin media.
+    :returns:
+        The list of external subtitles available for this Jellyfin media.
     """
     if check_perms(request.data):
         return Subtitle.subtitle_discover(item_id)
@@ -263,24 +261,58 @@ def subtitle_discover(item_id: str) -> str:
 
 @app.route('/subtitles/<item_id>/all', methods=['POST'])
 def subtitles_all(item_id: str) -> str:
+    """Retrieve the list of cached subtitles for a media.
+
+    First checks if the request contains a valid and non-revoked authorization key.
+    If the authorization is successful, it retrieves and returns the list of cached
+    subtitles for the media. If the authorization fails, it returns an access denied
+    response.
+
+    :params item_id: The unique identifier for the media.
+
+    :returns:
+        The list of cached subtitles in a Resonite compatible format.
+    """
     if check_perms(request.data):
         return Subtitle.subtitles_all(item_id)
     return access_denied()
 
 @app.route('/subtitles/<item_id>/<subtitle_name>/extract/status', methods=['POST'])
 def subtitle_extract_status(item_id: str, subtitle_name: str) -> str:
+    """Return the extraction status for a cached subtitle.
+
+    First checks if the request contains a valid and non-revoked authorization key.
+    If the authorization is successful, it returns the extraction status for the
+    subtitle with the specified name for the media. If the authorization fails, it
+    returns an access denied response.
+
+    :params item_id: The unique identifier for the media.
+    :params subtitle_name: The name of the subtitle for the media.
+
+    :returns:
+        The extraction status in a Resonite compatible format.
+    """
     if check_perms(request.data):
         return Subtitle.subtitle_extract_status(item_id, subtitle_name)
     return access_denied()
 
 @app.route('/extract_status', methods=['POST'])
 def extract_status() -> str:
+    """Return all the extraction status for all cached subtitles.
+
+    First checks if the request contains a valid and non-revoked authorization key.
+    If the authorization is successful, it returns the extraction status for all
+    cached subtitles. If the authorization fails, it returns an access denied response.
+
+    :returns:
+        A list of extraction status in a Resonite compatible format.
+    """
     if check_perms(request.data):
         return Subtitle.extract_status()
     return access_denied()
 
 def main() -> None:
-    parser: ArgumentParser = argparse.ArgumentParser()
+    parser: ArgumentParser = ArgumentParser()
     parser.add_argument(
         '--port', type=int, default=5000,
         help='Port to use, default 5000')
@@ -331,7 +363,7 @@ def main() -> None:
     ):
         item_not_found('SERIES_ID', app.config.get('SERIES_ID'))
 
-    task: Thread = threading.Thread(
+    task: Thread = Thread(
         target=Subtitle.subtitle_extract_thread
     )
     task.start()

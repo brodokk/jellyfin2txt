@@ -19,7 +19,7 @@ class EnhancedJSONEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-class CollisionsList(list):
+class KeysValidator(list):
     def get(self, field, value):
         for item in self:
             if getattr(item, field) == value:
@@ -64,10 +64,10 @@ class Key:
 
 @dataclasses.dataclass
 class KeyManager:
-    keys: CollisionsList[Key]
+    keys: KeysValidator[Key]
 
     def __init__(self, *args, **kargs) -> None:
-        self.keys = CollisionsList()
+        self.keys = KeysValidator()
         self.keyfile = "keyfile.json"
         self._load_keyfile()
         super().__init__()
@@ -125,7 +125,7 @@ class KeyManager:
         print(self._gen_table(self.keys))
 
 
-keyManager = KeyManager(CollisionsList())
+keyManager = KeyManager(KeysValidator())
 
 class keyManagerAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
