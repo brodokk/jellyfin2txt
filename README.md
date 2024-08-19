@@ -18,11 +18,12 @@ Then you can simply use the command `pip install .` for example.
 
 ### Docker
 
-Their is also a docker example but keep in mind for building the path for the
-tessdata `best` for `tesseract-ocr` **is** hardcorded in the folder
-`tessdata_best` at the root of the project. You will need to put the data in
-this folder. See near the end of the file in the
-`Extracting hardcoded subtitles` explanation.
+Their is also a docker image available at
+https://hub.docker.com/r/spacealicornnetwork/jellyfin2txt but keep in
+mind for building the path for the tessdata `best` for `tesseract-ocr`
+**is** hardcorded in the folder `tessdata_best` at the root of the project.
+You will need to put the data in this folder. See near the end of the file
+in the `Extracting hardcoded subtitles` explanation.
 
 ## Usage
 
