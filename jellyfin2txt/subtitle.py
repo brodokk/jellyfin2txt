@@ -184,9 +184,9 @@ class Subtitle:
                 to_extract = False
                 if media['IsExternal'] or media['IsTextSubtitleStream'] or media['SupportsExternalStream']:
                     if 'DeliveryUrl' in media:
-                        url = f"{app.config['SERVER_URL']}{media['DeliveryUrl']}"
+                        url = f"{app.config['SERVER_URL'].rstrip('/')}{media['DeliveryUrl']}"
                     else:
-                        url = f"{app.config['SERVER_URL']}/Videos/{item_id}/{item_id}/Subtitles/{media['Index']}/0/Stream.{codec}"
+                        url = f"{app.config['SERVER_URL'].rstrip('/')}/Videos/{item_id}/{item_id}/Subtitles/{media['Index']}/0/Stream.{codec}"
                     tmp_filename = Subtitle.tmp_subtitles_output_folder / final_filename 
                     if codec in Subtitle.resonite_subtitles_file_supported:
                         urllib.request.urlretrieve(url, tmp_filename)

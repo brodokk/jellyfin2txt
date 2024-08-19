@@ -54,8 +54,9 @@ client.config.app(
 client.config.data["http.user_agent"]: str = f"Jellyfin-MPV-Shim/{version}"
 client.config.data["auth.ssl"]: bool = not False
 client.auth.connect_to_address(app.config['SERVER_URL'])
+client.auth.connect_to_address(app.config['SERVER_URL'].rstrip('/'))
 login_data: dict = client.auth.login(
-    app.config['SERVER_URL'],
+    app.config['SERVER_URL'].rstrip('/'),
     app.config['USERNAME'],
     app.config['PASSWORD'],
 )

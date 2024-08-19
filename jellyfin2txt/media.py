@@ -46,7 +46,7 @@ class Media:
         fillWidth: int = 213,
         quality: int = 96,
     ) -> str:
-        server_url: str = app.config['SERVER_URL']
+        server_url: str = app.config['SERVER_URL'].rstrip('/')
         return (
             f'{server_url}/Items/{item_id}/Images/Primary?fillHeight={fillHeight}'
             f'&fillWidth={fillWidth}&quality={quality}'
